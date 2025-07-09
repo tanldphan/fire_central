@@ -1,0 +1,7 @@
+{
+    "idf.portWin": "COM6",
+    "idf.flashType": "JTAG",
+    "files.associations": {
+        "wind_speed.h": "c"
+    }
+}
