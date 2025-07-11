@@ -31,4 +31,4 @@ void app_main(void)
             ESP_LOGI(LOG_TAG, "Wind: %.2f m/s %s", wind_speed, DirectionList[indexed]);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
-}
+}s
