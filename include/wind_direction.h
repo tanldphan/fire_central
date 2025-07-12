@@ -16,8 +16,8 @@
 #define Direction_CTRL (15)
 
 // Declare global functions
-void initiate_WindDirection();
-uint8_t Get_WindDirection();
+void wind_direction_init();
+uint8_t get_wind_direction();
 
 // Wind directions definitions:
 extern const char *DirectionList[17];

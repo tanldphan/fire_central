@@ -1,6 +1,6 @@
-//SKU:SEN0483
+// SKU:SEN0483
 
-#pragma once // tells compiler to use this file only once
+#pragma once
 
 // ESP-IDF included SDK:
 #include "driver/uart.h"
@@ -18,5 +18,5 @@
 #define Direction_CTRL (15) // Set direction control to ESP's internal pin 15
 
 // Declare global functions
-void initiate_WindSpeed();
-float Get_WindSpeed();
+void wind_speed_init();
+float get_wind_speed();

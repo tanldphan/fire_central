@@ -13,7 +13,7 @@
 // Tag for troubleshooting
 #define ERROR_WindSpeed "ERROR"
 
-void initiate_WindSpeed()
+void wind_speed_init()
 {
     uart_config_t UART_cfg =
     { // Default parameters
@@ -33,7 +33,7 @@ void initiate_WindSpeed()
     gpio_set_direction(Direction_CTRL, GPIO_MODE_OUTPUT); // set direction control pin as output for RS485
 }
 
-float Get_WindSpeed()
+float get_wind_speed()
 {
     uint8_t RTU_request[8]; // Layout request byte sequence
     uint8_t RTU_response[WindSpeed_Buffer_Size]; // Layout response sequence with buffer size

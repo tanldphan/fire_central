@@ -19,7 +19,7 @@ const char *DirectionList[] =
     "Error!"
 };
 
-void initiate_WindDirection()
+void wind_direction_init()
 {
     uart_config_t UART_cfg =
     { // Default parameters
@@ -39,7 +39,7 @@ void initiate_WindDirection()
     gpio_set_direction(Direction_CTRL, GPIO_MODE_OUTPUT); // set direction control pin as output for RS485
 }
 
-uint8_t Get_WindDirection()
+uint8_t get_wind_direction()
 {
     uint8_t RTU_request[8]; // define 8-byte request
     uint8_t RTU_response[WindDirection_Buffer_Size]; // define response with buffer size
