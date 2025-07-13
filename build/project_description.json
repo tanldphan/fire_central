@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "fire_central",
-    "project_version":    "d98e845-dirty",
+    "project_version":    "0b378f4-dirty",
     "project_path":       "C:/Users/tanld/Desktop/fire_central",
     "idf_path":           "C:/Users/tanld/esp/v5.4.2/esp-idf",
     "build_dir":          "C:/Users/tanld/Desktop/fire_central/build",
@@ -1195,7 +1195,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/Users/tanld/Desktop/fire_central/build/esp-idf/main/libmain.a",
-            "sources": [ "C:/Users/tanld/Desktop/fire_central/main/main.c", "C:/Users/tanld/Desktop/fire_central/main/wind_speed.c", "C:/Users/tanld/Desktop/fire_central/main/wind_direction.c", "C:/Users/tanld/Desktop/fire_central/main/utils.c" ],
+            "sources": [ "C:/Users/tanld/Desktop/fire_central/main/main.c", "C:/Users/tanld/Desktop/fire_central/main/mqtt.c", "C:/Users/tanld/Desktop/fire_central/main/utils.c", "C:/Users/tanld/Desktop/fire_central/main/wifi.c", "C:/Users/tanld/Desktop/fire_central/main/wind_direction.c", "C:/Users/tanld/Desktop/fire_central/main/wind_speed" ],
             "include_dirs": [ "../include" ]
         },
         "mbedtls": {

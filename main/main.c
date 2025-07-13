@@ -185,7 +185,7 @@ static void sensor_data_collection()
                 while (waited_ms < MAX_WAIT_SECONDS_MS)
                 {
                     ESP_LOGD(pcTaskGetName(NULL), "Time passed: %d seconds", waited_ms / 1000);
-                    vTaskDelay (pdMS_TO_TICKS(100));
+                    vTaskDelay(pdMS_TO_TICKS(100));
                     // Look for response
                     if (lora_received())
                     {
@@ -195,7 +195,7 @@ static void sensor_data_collection()
                         if ((packet_length == PACKET_SIZE)
                             && (validate_mac(sensor_nodes[i], sensor_data_packet.raw, packet_length)))
                         {
-                            ESP_LOGI (pcTaskGetName(NULL), "%d byte packet received.", packet_length);
+                            ESP_LOGI(pcTaskGetName(NULL), "%d byte packet received.", packet_length);
                             // Process the child sensor data received
                             mqtt_print_packet (sensor_data_packet.raw, packet_length);
                             prepare_packet(&sensor_data_packet);
@@ -208,7 +208,7 @@ static void sensor_data_collection()
                 waited_ms = 0; // reset wait time
                 vTaskDelay(pdMS_TO_TICKS(SENSOR_NODE_INTERVAL));
             }
-            ESP_LOGI(pcTaskGetName (NULL), "Finished gathering sensor data.");
+            ESP_LOGI(pcTaskGetName(NULL), "Finished gathering sensor data.");
             vTaskDelay(pdMS_TO_TICKS(SENSOR_BATCH_INTERVAL));
         }
     }

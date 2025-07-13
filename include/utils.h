@@ -1,5 +1,5 @@
 #pragma once
-#include <stdint.h>'
+#include <stdint.h>
 #include "mqtt.h"
 
 uint16_t cal_CRC(uint8_t *data, uint16_t length);
