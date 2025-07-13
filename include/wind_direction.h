@@ -20,4 +20,5 @@ void wind_direction_init();
 uint8_t get_wind_direction();
 
 // Wind directions definitions:
-extern const char *DirectionList[17];
+//extern const char *DirectionList[17];
+// to be interpreted on server side

@@ -10,14 +10,15 @@
 #define ERROR_WindDirection "ERROR"
 
 // 16 cardinal directions
-const char *DirectionList[] =
-{
-    "N", "NNE", "NE", "ENE",
-    "E", "ESE", "SE", "SSE",
-    "S", "SSW", "SW", "WSW",
-    "W", "WNW", "NW", "NNW",
-    "Error!"
-};
+// const char *DirectionList[] =
+// {
+//     "N", "NNE", "NE", "ENE",
+//     "E", "ESE", "SE", "SSE",
+//     "S", "SSW", "SW", "WSW",
+//     "W", "WNW", "NW", "NNW",
+//     "Error!"
+// };
+// to be interpreted on server side
 
 void wind_direction_init()
 {

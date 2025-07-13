@@ -1,5 +1,5 @@
 // Call headers
-#include "include/mqtt.h"
+#include "mqtt.h"
 
 // Local MQTT log tag
 static const char* TAG = "MQTT";
@@ -91,7 +91,7 @@ void mqtt_event_handler(void* handler_arg, esp_event_base_t event_base, int32_t 
 
 void mqtt_publish_reading (char* message_to_host)
 {
-    esp_mqtt_client_publish (client, sensor_nodes_data_topic, message_to_host, 0, 2, 0);
+    esp_mqtt_client_publish(client, sensor_nodes_data_topic, message_to_host, 0, 2, 0);
 }
 
 

@@ -16,8 +16,8 @@
 #define MAC_SIZE 6
 #define PACKET_SIZE 28 + MAC_SIZE
 #define QUALITY_OF_SERVICE 1 // 0: send once, move on | 1: send and confirm, may duplicate | 2: send and confirm, no duplicate
-#define MAX_SENSOR_NODES_COUNT 6
-#define MAX_WAIT_SECONDS_MS (5000)
+#define MAX_SENSOR_NODES_COUNT 6 // choose how many sensor nodes assigned to central.
+#define MAX_WAIT_SECONDS_MS (5000) // choose how long to wait for sensor node response.
 #define START_OF_CHILDREN MAC_SIZE + 1
 #define MQTT_HOST "mqtt://mqtt.eclipseprojects.io"
 
