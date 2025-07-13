@@ -3,6 +3,7 @@
     "idf.flashType": "JTAG",
     "files.associations": {
         "wind_speed.h": "c",
-        "mqtt.h": "c"
+        "mqtt.h": "c",
+        "esp_wifi.h": "c"
     }
 }

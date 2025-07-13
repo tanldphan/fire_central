@@ -42,8 +42,8 @@ static uint8_t sensor_nodes_count = 0; // assign node count here.
 static char mqtt_packet[200];
 
 // Declaring loop functions for tasks
-static void sensor_data_collection ();
-static void update_sensor_nodes ();
+static void sensor_data_collection();
+static void update_sensor_nodes();
 static void get_wind_data();
 static void send_sensor_data_request_ping(uint8_t* sensor_node);
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet);
@@ -58,6 +58,7 @@ static uint8_t wind_direction_indexed = 16;
 // DUMMY SCHEDULE
 #define SENSOR_NODE_INTERVAL 1000 // ms
 #define SENSOR_BATCH_INTERVAL 1000 * 60 * 40 //minutes
+// only temporary, batch interval is RTC interval
 
 // BOOT SEQUENCE
 void app_main(void)
@@ -106,7 +107,7 @@ static void send_sensor_data_request_ping(uint8_t *sensor_node)
 
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet)
 {
-    sprintf(mqtt_packet, "%02x%02x%02x%02x%02x%02x,%ld,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d",
+    sprintf(mqtt_packet, "%02x%02x%02x%02x%02x%02x,%ld,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%0.2f,%d",
             lora_sensor_data_packet->readings.mac[0], lora_sensor_data_packet->readings.mac[1],
             lora_sensor_data_packet->readings.mac[2], lora_sensor_data_packet->readings.mac[3],
             lora_sensor_data_packet->readings.mac[4], lora_sensor_data_packet->readings.mac[5],
@@ -127,9 +128,9 @@ static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet)
 
 static void clear_sensor_nodes (void)
 {
-    for (int child = 0; child < sensor_nodes_count; child++)
+    for (int i = 0; i < sensor_nodes_count; i++)
     {
-        memset (sensor_nodes[child], 0, MAC_SIZE);
+        memset(sensor_nodes[i], 0, MAC_SIZE);
     }
 }
 
@@ -175,29 +176,27 @@ static void sensor_data_collection()
             ESP_LOGI(pcTaskGetName(NULL), "%d nodes assigned.", sensor_nodes_count);
             for (int i = 0; i < sensor_nodes_count; i++) // go thru each nodes.
             {
-                // request data from each node.
+                // send data request ping to node
                 send_sensor_data_request_ping(sensor_nodes[i]);
                 ESP_LOGI(pcTaskGetName(NULL), "Waiting for node %d (%02x%02x%02x%02x%02x%02x) to respond.", i + 1,
                     sensor_nodes[i][0], sensor_nodes[i][1], sensor_nodes[i][2],
                     sensor_nodes[i][3], sensor_nodes[i][4], sensor_nodes[i][5]); // announce node address currently waiting on.
-                // 
+                // switch to receive mode
                 lora_receive();
                 while (waited_ms < MAX_WAIT_SECONDS_MS)
                 {
                     ESP_LOGD(pcTaskGetName(NULL), "Time passed: %d seconds", waited_ms / 1000);
                     vTaskDelay(pdMS_TO_TICKS(100));
                     // Look for response
-                    if (lora_received())
+                    if (lora_received() == 1)
                     {
-                        int packet_length
-                            = lora_receive_packet(sensor_data_packet.raw, sizeof(sensor_data_packet.raw));
-                        // Validate received packet
-                        if ((packet_length == PACKET_SIZE)
-                            && (validate_mac(sensor_nodes[i], sensor_data_packet.raw, packet_length)))
+                        int packet_length = lora_receive_packet(sensor_data_packet.raw, sizeof(sensor_data_packet.raw));
+                        // Validate received paccket
+                        if ((packet_length == PACKET_SIZE) && (validate_mac(sensor_nodes[i], sensor_data_packet.raw, packet_length) == 1))
                         {
                             ESP_LOGI(pcTaskGetName(NULL), "%d byte packet received.", packet_length);
                             // Process the child sensor data received
-                            mqtt_print_packet (sensor_data_packet.raw, packet_length);
+                            mqtt_print_packet(sensor_data_packet.raw, packet_length);
                             prepare_packet(&sensor_data_packet);
                             mqtt_publish_reading(mqtt_packet);
                             break;
