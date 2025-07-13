@@ -1,6 +1,6 @@
 idf_component_register(
     SRCS
-        "main.c" "wind_speed.c" "wind_direction.c" "utils.c"
+        "main.c" "mqtt.c" "utils.c" "wifi.c" "wind_direction.c" "wind_speed"
         
     INCLUDE_DIRS
         "../include"

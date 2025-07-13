@@ -23,7 +23,7 @@
 
 extern esp_mqtt_event_handle_t event;
 extern uint8_t sensor_nodes_update_status;
-extern uint8_t mac_address[MAC_SIZE];
+extern uint8_t mac_esp[MAC_SIZE];
 
 // Global MQTT functions:
 void mqtt_init (void);

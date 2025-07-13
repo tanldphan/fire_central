@@ -20,12 +20,11 @@
 #include "driver/i2c.h"
 #include "esp_efuse.h"
 
-
 // Call headers
 #include "lora.h"
 #include "mqtt.h"
 #include "utils.h"
-#include "wifi.c"
+#include "wifi.h"
 #include "wind_direction.h"
 #include "wind_speed.h"
 
@@ -35,8 +34,10 @@
 // Definitions
 static TaskHandle_t monitoring_task;
 static TaskHandle_t update_task;
+
 static uint8_t sensor_nodes[MAX_SENSOR_NODES_COUNT][MAC_SIZE] = { 0 };
 static uint8_t sensor_nodes_count = 0;
+
 static char mqtt_packet[200];
 
 // void app_main(void)
@@ -53,7 +54,7 @@ static char mqtt_packet[200];
 // }
 
 
-
+// Preprocessing functions
 static void sensor_data_collection ();
 static void update_sensor_nodes ();
 static void send_sensor_data_request_ping (uint8_t* sensor_node);
@@ -62,30 +63,36 @@ static bool validate_mac (uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes (void);
 static void print_sensor_nodes (void);
 
-
+// Boot sequence
 void app_main (void)
 {
-    esp_efuse_mac_get_default(mac_address);
-    ESP_LOGI(TAG_MONITOR, "Node MAC: %02x%02x%02x%02x%02x%02x\n", mac_address[0], mac_address[1], mac_address[2],
-              mac_address[3], mac_address[4], mac_address[5]);
+    esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address
+    ESP_LOGI(TAG_MONITOR, "Node MAC: %02x%02x%02x%02x%02x%02x\n",
+        mac_esp[0], mac_esp[1], mac_esp[2],
+        mac_esp[3], mac_esp[4], mac_esp[5]);
 
-    nvs_flash_init();
+    // Initialize functions
+    nvs_flash_init(); // ESP's non-volatile storage
     lora_init();
-    wifi_init();
     mqtt_init();
+    wifi_init();
+    wind_direction_init();
+    wind_speed_init();
 
     vTaskDelay(pdMS_TO_TICKS (5000));
 
+    // Create ESP tasks
+    // (functions, name, stack size, arguments, priority, handle reference)
     xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
     xTaskCreate(update_sensor_nodes, "Update", 1024 * 5, NULL, 6, &update_task);
 }
 
 static void sensor_data_collection ()
 {
-    ESP_LOGI (pcTaskGetName (NULL), "Task Started!");
-    while (true)
+    ESP_LOGI (pcTaskGetName(NULL), "Task Started!"); // Announce current task initiation
+    while (1)
     {
-        union lora_packet_u sensor_data_packet = { 0 };
+        lora_packet_u sensor_data_packet = {0};
         int waited_ms = 0;
         // Wait till update is complete is available
         if (sensor_nodes_count > 0)

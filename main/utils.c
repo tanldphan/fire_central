@@ -3,37 +3,7 @@
 #include "freertos/task.h"
 #include "utils.h"
 
-// Define PMS data structure
-typedef struct
-{   // exact 2-byte metrics
-    uint16_t pm_std_1_0; // Mass concentration Standard particles (ug/m^3)
-    uint16_t pm_std_2_5; // Particle sizes: <1.0, <2.5, <10 (um)
-    uint16_t pm_std_10;
-    uint16_t pm_atm_1_0; // Mass concentration Atmospheric particles ug/m^3
-    uint16_t pm_atm_2_5;
-    uint16_t pm_atm_10;
-} pms_metric_t;
 
-// Define BME data structure
-typedef struct 
-{   // 4-byte compensated metrics
-    int32_t bme_comp_temp;
-    int32_t bme_comp_pres;
-    int32_t bme_comp_humd;
-    int32_t bme_comp_gas;
-} bme_metric_t;
-
-// Define LoRa package
-union lora_package_u
-{
-    struct __attribute__ ((packed))
-    {
-        uint8_t mac[MAC_SIZE];
-        pms_metric_t pms_reading;
-        bme_metric_t bme_reading;
-    } readings;
-    uint8_t raw[PACKET_SIZE];
-};
 
 // CRC error checking algorithm for serial wind sensors
 uint16_t cal_CRC(uint8_t *data, uint16_t length)

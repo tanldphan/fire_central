@@ -11,12 +11,12 @@ static const char* sensor_nodes_data_topic = "/fire_lab/data";
 
 esp_mqtt_event_handle_t event = NULL;
 uint8_t sensor_nodes_update_status = 0;
-uint8_t mac_address[MAC_SIZE] = { 0 };
+uint8_t mac_esp[MAC_SIZE] = { 0 };
 
 void mqtt_init()
 {
-    sprintf(mac_address_hex, "%02x%02x%02x%02x%02x%02x", mac_address[0], mac_address[1], mac_address[2],
-             mac_address[3], mac_address[4], mac_address[5]);
+    sprintf(mac_address_hex, "%02x%02x%02x%02x%02x%02x", mac_esp[0], mac_esp[1], mac_esp[2],
+             mac_esp[3], mac_esp[4], mac_esp[5]);
 
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = MQTT_HOST,
