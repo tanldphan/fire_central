@@ -7,7 +7,7 @@
 #include "utils.h"
 
 // Tag for troubleshooting
-#define ERROR_WindDirection "ERROR"
+#define TAG_WD "ERROR"
 
 // 16 cardinal directions
 // const char *DirectionList[] =
@@ -73,7 +73,7 @@ uint8_t get_wind_direction()
     
     if (received_bytes < 7) // Check for signal corruption -- 7 bytes minimum
     {
-        ESP_LOGW(ERROR_WindDirection, "Bad signal -- %d bytes received", received_bytes);
+        ESP_LOGW(TAG_WD, "Bad signal -- %d bytes received", received_bytes);
         return 16; // Returns error index
     }
 
@@ -81,7 +81,7 @@ uint8_t get_wind_direction()
     uint16_t calculated_crc = cal_CRC(RTU_response, received_bytes - 2); // Calculate response's CRC
     if (RX_crc != calculated_crc) // Check CRC
     {   
-        ESP_LOGW(ERROR_WindDirection, "CRC disparity!");
+        ESP_LOGW(TAG_WD, "CRC disparity!");
         return 16;
     }
 

@@ -1,6 +1,6 @@
 #include "wifi.h"
 
-static const char* TAG = "WIFI";
+static const char* TAG_WIFI = "WIFI";
 
 static int retry_count = 0;
 static EventGroupHandle_t wifi_event_group;
@@ -37,7 +37,7 @@ void wifi_init ()
     ESP_ERROR_CHECK (esp_wifi_set_config (WIFI_IF_STA, &wifi_cfg));
     ESP_ERROR_CHECK (esp_wifi_start ());
 
-    ESP_LOGI (TAG, "Initializing wifi station finished.");
+    ESP_LOGI (TAG_WIFI, "Initializing wifi station finished.");
     // Wait until connection is established (WIFI_CONNECTED_BIT) or connection
     // failed for the maximum number of retries (WIFI_FAIL_BIT). Bits are set by
     // wifi_event_handler.
@@ -45,15 +45,15 @@ void wifi_init ()
                                             pdFALSE, portMAX_DELAY);
     if (bits & WIFI_CONNECTED_BIT)
     {
-        ESP_LOGI (TAG, "Connected to access point SSID:%s, password:%s", WIFI_SSID, WIFI_PASSWORD);
+        ESP_LOGI (TAG_WIFI, "Connected to access point SSID:%s, password:%s", WIFI_SSID, WIFI_PASSWORD);
     }
     else if (bits & WIFI_FAIL_BIT)
     {
-        ESP_LOGE (TAG, "Failed to connect to SSID:%s, password:%s", WIFI_SSID, WIFI_PASSWORD);
+        ESP_LOGE (TAG_WIFI, "Failed to connect to SSID:%s, password:%s", WIFI_SSID, WIFI_PASSWORD);
     }
     else
     {
-        ESP_LOGE (TAG, "UNEXPECTED EVENT.");
+        ESP_LOGE (TAG_WIFI, "UNEXPECTED EVENT.");
     }
 }
 
@@ -64,28 +64,28 @@ void wifi_event_handler (void* handler_arg, esp_event_base_t event_base, int32_t
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
-        ESP_LOGI (TAG, "WiFi Station Started.");
+        ESP_LOGI (TAG_WIFI, "WiFi Station Started.");
         // Once the WiFi station is setup and started, try connecting to the
         // network.
         esp_wifi_connect ();
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
     {
-        ESP_LOGI (TAG, "WiFi Station Connected.");
+        ESP_LOGI (TAG_WIFI, "WiFi Station Connected.");
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        ESP_LOGW (TAG, "WiFi Station Disconnected.");
+        ESP_LOGW (TAG_WIFI, "WiFi Station Disconnected.");
         if (retry_count < MAXIMUM_RETRY)
         {
             esp_wifi_connect ();
             retry_count++;
-            ESP_LOGI (TAG, "Retry to connect to access point.");
+            ESP_LOGI (TAG_WIFI, "Retry to connect to access point.");
         }
         else
         {
             xEventGroupSetBits (wifi_event_group, WIFI_FAIL_BIT);
-            ESP_LOGE (TAG, "Failed to connect to access point in under %d retry.", MAXIMUM_RETRY);
+            ESP_LOGE (TAG_WIFI, "Failed to connect to access point in under %d retry.", MAXIMUM_RETRY);
         }
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
@@ -93,9 +93,9 @@ void wifi_event_handler (void* handler_arg, esp_event_base_t event_base, int32_t
         // If we get an IP from the access point (meaning we successfuly
         // connected to the WiFi network), print out our given IP address
         // and set the connected event bit (flag) in the wifi event group.
-        ESP_LOGI (TAG, "Connected to AP SSID: %s", WIFI_SSID);
+        ESP_LOGI (TAG_WIFI, "Connected to AP SSID: %s", WIFI_SSID);
         ip_event_got_ip_t* got_ip = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI (TAG, "Got IP:" IPSTR, IP2STR (&got_ip->ip_info.ip));
+        ESP_LOGI (TAG_WIFI, "Got IP:" IPSTR, IP2STR (&got_ip->ip_info.ip));
         retry_count = 0;
         xEventGroupSetBits (wifi_event_group, WIFI_CONNECTED_BIT);
     }

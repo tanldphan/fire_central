@@ -1,9 +1,11 @@
 {
-    "idf.portWin": "COM6",
-    "idf.flashType": "JTAG",
-    "files.associations": {
-        "wind_speed.h": "c",
-        "mqtt.h": "c",
-        "esp_wifi.h": "c"
-    }
+  "idf.espIdfPath": "C:/Users/tanld/esp/v5.4.2/esp-idf",
+  "idf.portWin": "COM6",
+  "idf.flashType": "JTAG",
+  "files.associations": {
+    "wind_speed.h": "c",
+    "mqtt.h": "c",
+    "esp_wifi.h": "c"
+  },
+  "C_Cpp.errorSquiggles": "disabled"
 }

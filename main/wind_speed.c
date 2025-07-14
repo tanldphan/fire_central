@@ -11,7 +11,7 @@
 #include "utils.h"
 
 // Tag for troubleshooting
-#define ERROR_WindSpeed "ERROR"
+#define TAG_WS "ERROR"
 
 void wind_speed_init()
 {
@@ -67,14 +67,14 @@ float get_wind_speed()
     
     if (received_bytes < 7)
     {
-        ESP_LOGW(ERROR_WindSpeed, "Bad signal -- %d bytes received", received_bytes);
+        ESP_LOGW(TAG_WS, "Bad signal -- %d bytes received", received_bytes);
         return -1.0f;
     }
     uint16_t RX_crc = (RTU_response[received_bytes - 1] << 8) | RTU_response[received_bytes - 2]; // Extract response's CRC
     uint16_t calculated_crc = cal_CRC(RTU_response, received_bytes - 2); // Calculate response's CRC
     if (RX_crc != calculated_crc)
         {
-            ESP_LOGW(ERROR_WindSpeed, "CRC disparity!");
+            ESP_LOGW(TAG_WS, "CRC disparity!");
             return -1.0f;
         }
     return ((RTU_response[3] << 8) | RTU_response[4]) / 10.0; // Return data to function

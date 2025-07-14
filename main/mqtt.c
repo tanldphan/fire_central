@@ -1,8 +1,16 @@
+#include <string.h>
+#include <time.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
+static struct tm server_time = {0}; // initialize server time, flushes
+static bool time_received = false; // initialize time fetch verify
+
 // Call headers
 #include "mqtt.h"
 
 // Local MQTT log tag
-static const char* TAG = "MQTT";
+static const char* TAG_MQTT = "MQTT";
 
 static esp_mqtt_client_handle_t client;
 static char mac_address_hex[MAC_SIZE * 2 + 1] = { 0 };
@@ -11,7 +19,7 @@ static const char* sensor_nodes_data_topic = "/fire_lab/data";
 
 esp_mqtt_event_handle_t event = NULL;
 uint8_t sensor_nodes_update_status = 0;
-uint8_t mac_esp[MAC_SIZE] = { 0 };
+uint8_t mac_esp[MAC_SIZE] = {0};
 
 void mqtt_init()
 {
@@ -26,7 +34,7 @@ void mqtt_init()
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, &mqtt_event_handler, NULL);
     esp_mqtt_client_start(client);
 
-    ESP_LOGI (TAG, "MQTT client initialized and started.");
+    ESP_LOGI (TAG_MQTT, "MQTT client initialized and started.");
 }
 
 
@@ -38,25 +46,25 @@ void mqtt_event_handler(void* handler_arg, esp_event_base_t event_base, int32_t 
     switch ((esp_mqtt_event_id_t) event_id)
     {
     case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(TAG, "MQTT Event: CONNECTED");
+        ESP_LOGI(TAG_MQTT, "MQTT Event: CONNECTED");
         msg_id = esp_mqtt_client_subscribe (event_client, sensor_nodes_assign_topic, 0);
-        ESP_LOGI(TAG, "Sent subscribe successful, msg_id=%d", msg_id);
+        ESP_LOGI(TAG_MQTT, "Sent subscribe successful, msg_id=%d", msg_id);
         break;
 
     case MQTT_EVENT_DISCONNECTED:
-        ESP_LOGI(TAG, "MQTT Event: DISCONNECTED");
+        ESP_LOGI(TAG_MQTT, "MQTT Event: DISCONNECTED");
         break;
 
     case MQTT_EVENT_PUBLISHED:
-        ESP_LOGI(TAG, "MQTT Event: PUBLISHED");
+        ESP_LOGI(TAG_MQTT, "MQTT Event: PUBLISHED");
         break;
 
     case MQTT_EVENT_SUBSCRIBED:
-        ESP_LOGI(TAG, "MQTT Event: SUBSCRIBED.");
+        ESP_LOGI(TAG_MQTT, "MQTT Event: SUBSCRIBED.");
         break;
 
     case MQTT_EVENT_DATA:
-        ESP_LOGI (TAG, "MQTT Event: DATA RECEIVED");
+        ESP_LOGI (TAG_MQTT, "MQTT Event: DATA RECEIVED");
         // TODO: act accordingly on data event.
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
@@ -64,26 +72,26 @@ void mqtt_event_handler(void* handler_arg, esp_event_base_t event_base, int32_t 
         if (mqtt_validate_topic (event->topic, sensor_nodes_assign_topic)
             && mqtt_validate_central_mac (event->data, mac_address_hex))
         {
-            ESP_LOGI (TAG, "Received child update event.");
+            ESP_LOGI (TAG_MQTT, "Received child update event.");
             sensor_nodes_update_status = 1;
         }
         break;
 
     case MQTT_EVENT_ERROR:
-        ESP_LOGE (TAG, "MQTT Event: ERROR");
+        ESP_LOGE (TAG_MQTT, "MQTT Event: ERROR");
         if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT)
         {
             mqtt_log_error_if_nonzero ("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
             mqtt_log_error_if_nonzero ("reported from tls stack", event->error_handle->esp_tls_stack_err);
             mqtt_log_error_if_nonzero ("captured as transport's socket errno",
                                   event->error_handle->esp_transport_sock_errno);
-            ESP_LOGI (TAG, "Last errno string (%s)",
+            ESP_LOGI (TAG_MQTT, "Last errno string (%s)",
                       strerror (event->error_handle->esp_transport_sock_errno));
         }
         break;
 
     default:
-        ESP_LOGI (TAG, "Other event: id=%d", event->event_id);
+        ESP_LOGI (TAG_MQTT, "Other event: id=%d", event->event_id);
         break;
     }
 }
@@ -111,7 +119,7 @@ void mqtt_log_error_if_nonzero (const char* message, int error_code)
 {
     if (error_code != 0)
     {
-        ESP_LOGE (TAG, "Last error %s: 0x%x", message, error_code);
+        ESP_LOGE (TAG_MQTT, "Last error %s: 0x%x", message, error_code);
     }
 }
 

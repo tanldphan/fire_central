@@ -102,12 +102,12 @@ int lora_init(void)
     while (i++ < LORA_TIMEOUT_RESET)
     {
         version = lora_read_reg (LORA_REG_VERSION);
-        ESP_LOGD (TAG, "version=0x%02x", version);
+        ESP_LOGD (TAG_LORA, "version=0x%02x", version);
         if (version == 0x12)
             break;
         vTaskDelay (2);
     }
-    ESP_LOGD (TAG, "i=%d, TIMEOUT_RESET=%d", i, LORA_TIMEOUT_RESET);
+    ESP_LOGD (TAG_LORA, "i=%d, TIMEOUT_RESET=%d", i, LORA_TIMEOUT_RESET);
     if (i == LORA_TIMEOUT_RESET + 1)
         return 0; // Illegal version
     // at the end of the loop above, the max value i can reach is TIMEOUT_RESET
@@ -118,7 +118,7 @@ int lora_init(void)
     lora_sleep ();
     lora_write_reg (LORA_REG_FIFO_RX_BASE_ADDR, 0);
     lora_write_reg (LORA_REG_FIFO_TX_BASE_ADDR, 0);
-    lora_write_reg (LORA_REG_LNA, lora_read_reg (REG_LNA) | 0x03);
+    lora_write_reg (LORA_REG_LNA, lora_read_reg (LORA_REG_LNA) | 0x03);
     lora_write_reg (LORA_REG_MODEM_CONFIG_3, 0x04);
     lora_set_tx_power (17);
 
@@ -175,11 +175,11 @@ void lora_send_packet(uint8_t* buf, int size)
     {
         max_retry = 30;
     }
-    ESP_LOGD (TAG, "_sbw=%d max_retry=%d", _sbw, max_retry);
+    ESP_LOGD (TAG_LORA, "_sbw=%d max_retry=%d", _sbw, max_retry);
     while (1)
     {
         int irq = lora_read_reg (LORA_REG_IRQ_FLAGS);
-        ESP_LOGD (TAG, "lora_read_reg=0x%x", irq);
+        ESP_LOGD (TAG_LORA, "lora_read_reg=0x%x", irq);
         if ((irq & LORA_IRQ_TX_DONE_MASK) == LORA_IRQ_TX_DONE_MASK)
             break;
         loop++;
@@ -190,7 +190,7 @@ void lora_send_packet(uint8_t* buf, int size)
     if (loop == max_retry)
     {
         _send_packet_lost++;
-        ESP_LOGE (TAG, "lora_send_packet Fail");
+        ESP_LOGE (TAG_LORA, "lora_send_packet Fail");
     }
     lora_write_reg (LORA_REG_IRQ_FLAGS, LORA_IRQ_TX_DONE_MASK);
 }
@@ -236,7 +236,7 @@ void lora_set_tx_power(int level)
         level = 2;
     else if (level > 17)
         level = 17;
-    lora_write_reg (LORA_REG_PA_CONFIG, PA_BOOST | (level - 2));
+    lora_write_reg (LORA_REG_PA_CONFIG, LORA_PA_BOOST | (level - 2));
 }
 
 void lora_set_frequency(long frequency)
@@ -300,7 +300,7 @@ void lora_set_dio_mapping(int dio, int mode)
             _mode = _mode | mode;
         }
         lora_write_reg (LORA_REG_DIO_MAPPING_1, _mode);
-        ESP_LOGD (TAG, "REG_DIO_MAPPING_1=0x%02x", _mode);
+        ESP_LOGD (TAG_LORA, "REG_DIO_MAPPING_1=0x%02x", _mode);
     }
     else if (dio < 6)
     {
@@ -315,7 +315,7 @@ void lora_set_dio_mapping(int dio, int mode)
             _mode = _mode & 0xCF;
             _mode = _mode | (mode << 4);
         }
-        ESP_LOGD (TAG, "REG_DIO_MAPPING_2=0x%02x", _mode);
+        ESP_LOGD (TAG_LORA, "REG_DIO_MAPPING_2=0x%02x", _mode);
         lora_write_reg (LORA_REG_DIO_MAPPING_2, _mode);
     }
 }
@@ -325,7 +325,7 @@ int lora_get_dio_mapping(int dio)
     if (dio < 4)
     {
         int _mode = lora_read_reg (LORA_REG_DIO_MAPPING_1);
-        ESP_LOGD (TAG, "REG_DIO_MAPPING_1=0x%02x", _mode);
+        ESP_LOGD (TAG_LORA, "REG_DIO_MAPPING_1=0x%02x", _mode);
         if (dio == 0)
         {
             return ((_mode >> 6) & 0x03);
@@ -346,7 +346,7 @@ int lora_get_dio_mapping(int dio)
     else if (dio < 6)
     {
         int _mode = lora_read_reg (LORA_REG_DIO_MAPPING_2);
-        ESP_LOGD (TAG, "REG_DIO_MAPPING_2=0x%02x", _mode);
+        ESP_LOGD (TAG_LORA, "REG_DIO_MAPPING_2=0x%02x", _mode);
         if (dio == 4)
         {
             return ((_mode >> 6) & 0x03);
@@ -373,7 +373,7 @@ int lora_get_bandwidth(void)
 {
     // int bw;
     // bw = lora_read_reg(REG_MODEM_CONFIG_1) & 0xf0;
-    // ESP_LOGD(TAG, "bw=0x%02x", bw);
+    // ESP_LOGD(TAG_LORA, "bw=0x%02x", bw);
     // bw = bw >> 4;
     // return bw;
     return ((lora_read_reg (LORA_REG_MODEM_CONFIG_1) & 0xf0) >> 4);

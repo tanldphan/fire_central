@@ -4,6 +4,7 @@
 // BME680
 
 // PENDING: wifi mqtt communication with server
+// NOTE: don't trust intelliSense
 
 // C standard library
 #include <stdio.h>
@@ -49,16 +50,12 @@ static void send_sensor_data_request_ping(uint8_t* sensor_node);
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet);
 static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes(void);
-static void print_sensor_nodes(void);
+//static void print_sensor_nodes(void);
+// ^^ not being used
 
-// Initialize central wind data
-static float wind_speed = 0;
-static uint8_t wind_direction_indexed = 16;
-
-// DUMMY SCHEDULE
-#define SENSOR_NODE_INTERVAL 1000 // ms
-#define SENSOR_BATCH_INTERVAL 1000 * 60 * 40 //minutes
-// only temporary, batch interval is RTC interval
+// DUMMY SCHEDULE DURING WAKE TIME
+#define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
+#define SENSOR_BATCH_INTERVAL 1000 * 60 * 40 //minutes ----> allows multiple batche/attempts during wake time
 
 // BOOT SEQUENCE
 void app_main(void)
@@ -72,11 +69,17 @@ void app_main(void)
     nvs_flash_init(); // ESP's non-volatile storage
     lora_init();
     mqtt_init();
+    rtc_init();
     wifi_init();
     wind_direction_init();
     wind_speed_init();
-
+    // Initialize wind data
+    static float wind_speed = 0;
+    static uint8_t wind_direction_indexed = 16;
     vTaskDelay(pdMS_TO_TICKS(5000));
+
+    // Get current RTC's local real time (PENDING)
+    // rtc_set_time();
 
     // Create ESP tasks
     // (functions, name, stack size, arguments, priority, handle reference)
@@ -101,28 +104,28 @@ static void send_sensor_data_request_ping(uint8_t *sensor_node)
     uint8_t data_ping[MAC_SIZE] = {0};
     // insert mac
     memcpy(&data_ping, sensor_node, MAC_SIZE);
-    lora_send_packet(data_ping, sizeof (data_ping));
+    lora_send_packet(data_ping, sizeof(data_ping));
     ESP_LOGI(pcTaskGetName (NULL), "Data ping sent.");
 }
 
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet)
 {
     sprintf(mqtt_packet, "%02x%02x%02x%02x%02x%02x,%ld,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%0.2f,%d",
-            lora_sensor_data_packet->readings.mac[0], lora_sensor_data_packet->readings.mac[1],
-            lora_sensor_data_packet->readings.mac[2], lora_sensor_data_packet->readings.mac[3],
-            lora_sensor_data_packet->readings.mac[4], lora_sensor_data_packet->readings.mac[5],
-            lora_sensor_data_packet->readings.bme_reading.bme_comp_temp,
-            lora_sensor_data_packet->readings.bme_reading.bme_comp_pres,
-            lora_sensor_data_packet->readings.bme_reading.bme_comp_humd,
-            lora_sensor_data_packet->readings.bme_reading.bme_comp_gas,
-            lora_sensor_data_packet->readings.pms_reading.pms_std_1_0,
-            lora_sensor_data_packet->readings.pms_reading.pms_std_2_5,
-            lora_sensor_data_packet->readings.pms_reading.pms_std_10,
-            lora_sensor_data_packet->readings.pms_reading.pms_atm_1_0,
-            lora_sensor_data_packet->readings.pms_reading.pms_atm_2_5,
-            lora_sensor_data_packet->readings.pms_reading.pms_atm_10,
-            wind_speed,
-            wind_direction_indexed);
+        lora_sensor_data_packet->readings.mac[0], lora_sensor_data_packet->readings.mac[1],
+        lora_sensor_data_packet->readings.mac[2], lora_sensor_data_packet->readings.mac[3],
+        lora_sensor_data_packet->readings.mac[4], lora_sensor_data_packet->readings.mac[5],
+        lora_sensor_data_packet->readings.bme_reading.bme_comp_temp,
+        lora_sensor_data_packet->readings.bme_reading.bme_comp_pres,
+        lora_sensor_data_packet->readings.bme_reading.bme_comp_humd,
+        lora_sensor_data_packet->readings.bme_reading.bme_comp_gas,
+        lora_sensor_data_packet->readings.pms_reading.pms_std_1_0,
+        lora_sensor_data_packet->readings.pms_reading.pms_std_2_5,
+        lora_sensor_data_packet->readings.pms_reading.pms_std_10,
+        lora_sensor_data_packet->readings.pms_reading.pms_atm_1_0,
+        lora_sensor_data_packet->readings.pms_reading.pms_atm_2_5,
+        lora_sensor_data_packet->readings.pms_reading.pms_atm_10,
+        wind_speed,
+        wind_direction_indexed);
     printf("To be sent: %.*s\n", sizeof(mqtt_packet), mqtt_packet);
 }
 
@@ -134,20 +137,21 @@ static void clear_sensor_nodes (void)
     }
 }
 
-static void print_sensor_nodes (void)
-{
-    for (int i = 0; i < sensor_nodes_count; i++)
-    {
-        printf ("Child Node %d: ", i);
-        for (int j = 0; j < MAC_SIZE; j++)
-        {
-            printf ("%02x", sensor_nodes[i][j]);
-        }
-        printf ("\n");
-    }
-}
+// NOT BEING USED
+// static void print_sensor_nodes (void)
+// {
+//     for (int i = 0; i < sensor_nodes_count; i++)
+//     {
+//         printf ("Child Node %d: ", i);
+//         for (int j = 0; j < MAC_SIZE; j++)
+//         {
+//             printf ("%02x", sensor_nodes[i][j]);
+//         }
+//         printf ("\n");
+//     }
+// }
 
-static bool validate_mac (uint8_t* mac, uint8_t* packet, int packet_size)
+static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size)
 {
     if (packet_size < MAC_SIZE)
         return 0;
@@ -166,13 +170,13 @@ static void sensor_data_collection()
     {
         lora_packet_u sensor_data_packet = {0}; // defines and flushes sensor_data_packet.
         int waited_ms = 0; // initialize time waited.
-        if (sensor_nodes_count < 1)
+        if (sensor_nodes_count < 1) 
         {
             ESP_LOGI(pcTaskGetName(NULL), "Waiting for Node Assignment...");
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
         else
-        {
+        {   // Start collecting sequence
             ESP_LOGI(pcTaskGetName(NULL), "%d nodes assigned.", sensor_nodes_count);
             for (int i = 0; i < sensor_nodes_count; i++) // go thru each nodes.
             {
@@ -191,7 +195,7 @@ static void sensor_data_collection()
                     if (lora_received() == 1)
                     {
                         int packet_length = lora_receive_packet(sensor_data_packet.raw, sizeof(sensor_data_packet.raw));
-                        // Validate received paccket
+                        // Validate received packet
                         if ((packet_length == PACKET_SIZE) && (validate_mac(sensor_nodes[i], sensor_data_packet.raw, packet_length) == 1))
                         {
                             ESP_LOGI(pcTaskGetName(NULL), "%d byte packet received.", packet_length);
@@ -207,7 +211,7 @@ static void sensor_data_collection()
                 waited_ms = 0; // reset wait time
                 vTaskDelay(pdMS_TO_TICKS(SENSOR_NODE_INTERVAL));
             }
-            ESP_LOGI(pcTaskGetName(NULL), "Finished gathering sensor data.");
+            ESP_LOGI(pcTaskGetName(NULL), "Batch collection done.");
             vTaskDelay(pdMS_TO_TICKS(SENSOR_BATCH_INTERVAL));
         }
     }
@@ -218,12 +222,12 @@ static void update_sensor_nodes()
     ESP_LOGI(pcTaskGetName(NULL), "Task Started!");
     while(1)
     {
-        if (sensor_nodes_update_status)
+        if (sensor_nodes_update_status  == 1)
         {
             ESP_LOGI (pcTaskGetName(NULL), "Nodes List Update Available!");
             // Delete monitoring task if its running so read/write does not happen at
             // the same time
-            if (monitoring_task != NULL)
+            if (monitoring_task != NULL) // if there's something in monitor log
             {
                 vTaskDelete(monitoring_task);
             }
@@ -234,7 +238,7 @@ static void update_sensor_nodes()
             const char* iter = event->data;
             if (new_sensor_nodes_count <= MAX_SENSOR_NODES_COUNT)
             {
-                clear_sensor_nodes ();
+                clear_sensor_nodes();
                 int nodes_recorded = 0;
                 while (nodes_recorded != new_sensor_nodes_count)
                 {
@@ -244,15 +248,12 @@ static void update_sensor_nodes()
                     hex_array_to_byte_array (iter, sensor_nodes[nodes_recorded], MAC_SIZE * 2);
                     ++nodes_recorded;
                 }
-                ESP_LOGI (TAG_MONITOR, "Child nodes reassigned. Old Count=%d New Count=%d", sensor_nodes_count,
-                          new_sensor_nodes_count);
+                ESP_LOGI (TAG_MONITOR, "Child nodes reassigned. Old Count=%d New Count=%d", sensor_nodes_count, new_sensor_nodes_count);
                 sensor_nodes_count = new_sensor_nodes_count;
             }
             else
-                ESP_LOGW (TAG_MONITOR, "Updated sensor_nodes_count=%d is not <= to MAX_SENSOR_NODES_COUNT=%d",
-                          new_sensor_nodes_count, MAX_SENSOR_NODES_COUNT);
-
-            xTaskCreate (sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
+            ESP_LOGW (TAG_MONITOR, "Updated sensor_nodes_count=%d is not <= to MAX_SENSOR_NODES_COUNT=%d", new_sensor_nodes_count, MAX_SENSOR_NODES_COUNT);
+            xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
             sensor_nodes_update_status = 0;
         }
     }

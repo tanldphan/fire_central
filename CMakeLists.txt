@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
-
+set(EXTRA_COMPONENT_DIRS components/ds3231 components/i2cdev)
+set(EXTRA_COMPONENT_DIRS components/esp-idf-lib/components)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(fire_central C)
 set(CMAKE_C_STANDARD 99)
