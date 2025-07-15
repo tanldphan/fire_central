@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/tanld/Desktop/fire_central/components/ds3231
+# Install script for directory: C:/Users/tanld/Desktop/fire_central/components/esp-idf-lib/components/ds3231
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

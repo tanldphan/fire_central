@@ -6,7 +6,7 @@
 
 static i2c_dev_t dev; // define device descriptor structure, do not touch, defined in ds3231.c
 
-void rtc_init(void)
+void rtc_init_me(void)
 {
     i2cdev_init(); // built-in i2cdev initialization
     ds3231_init_desc(&dev, RTC_I2C, RTC_SDA, RTC_SCL); // point ds3231 to esp gpio

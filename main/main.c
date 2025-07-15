@@ -24,6 +24,7 @@
 // Call headers
 #include "lora.h"
 #include "mqtt.h"
+#include "rtc.h"
 #include "utils.h"
 #include "wifi.h"
 #include "wind_direction.h"
@@ -51,11 +52,15 @@ static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet);
 static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes(void);
 //static void print_sensor_nodes(void);
-// ^^ not being used
+
 
 // DUMMY SCHEDULE DURING WAKE TIME
 #define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
 #define SENSOR_BATCH_INTERVAL 1000 * 60 * 40 //minutes ----> allows multiple batche/attempts during wake time
+
+// Initialize wind data
+float wind_speed = 0;
+uint8_t wind_direction_indexed = 16;
 
 // BOOT SEQUENCE
 void app_main(void)
@@ -68,18 +73,15 @@ void app_main(void)
     // Initialize functions
     nvs_flash_init(); // ESP's non-volatile storage
     lora_init();
-    mqtt_init();
-    rtc_init();
     wifi_init();
+
+    vTaskDelay(pdMS_TO_TICKS(5000));
+    mqtt_init();
+    rtc_init_me();
     wind_direction_init();
     wind_speed_init();
-    // Initialize wind data
-    static float wind_speed = 0;
-    static uint8_t wind_direction_indexed = 16;
-    vTaskDelay(pdMS_TO_TICKS(5000));
 
-    // Get current RTC's local real time (PENDING)
-    // rtc_set_time();
+    vTaskDelay(pdMS_TO_TICKS(5000));
 
     // Create ESP tasks
     // (functions, name, stack size, arguments, priority, handle reference)
@@ -136,20 +138,6 @@ static void clear_sensor_nodes (void)
         memset(sensor_nodes[i], 0, MAC_SIZE);
     }
 }
-
-// NOT BEING USED
-// static void print_sensor_nodes (void)
-// {
-//     for (int i = 0; i < sensor_nodes_count; i++)
-//     {
-//         printf ("Child Node %d: ", i);
-//         for (int j = 0; j < MAC_SIZE; j++)
-//         {
-//             printf ("%02x", sensor_nodes[i][j]);
-//         }
-//         printf ("\n");
-//     }
-// }
 
 static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size)
 {

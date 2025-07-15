@@ -1022,8 +1022,3 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   include("C:/Users/tanld/Desktop/fire_central/build/esp-idf/wiegand/cmake_install.cmake")
 endif()
 
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("C:/Users/tanld/Desktop/fire_central/build/esp-idf/i2cdev_DISABLED/cmake_install.cmake")
-endif()
-

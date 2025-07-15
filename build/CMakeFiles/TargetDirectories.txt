@@ -1492,10 +1492,3 @@ C:/Users/tanld/Desktop/fire_central/build/esp-idf/wiegand/CMakeFiles/list_instal
 C:/Users/tanld/Desktop/fire_central/build/esp-idf/wiegand/CMakeFiles/install.dir
 C:/Users/tanld/Desktop/fire_central/build/esp-idf/wiegand/CMakeFiles/install/local.dir
 C:/Users/tanld/Desktop/fire_central/build/esp-idf/wiegand/CMakeFiles/install/strip.dir
-C:/Users/tanld/Desktop/fire_central/build/esp-idf/i2cdev_DISABLED/CMakeFiles/__idf_i2cdev_DISABLED.dir
-C:/Users/tanld/Desktop/fire_central/build/esp-idf/i2cdev_DISABLED/CMakeFiles/edit_cache.dir
-C:/Users/tanld/Desktop/fire_central/build/esp-idf/i2cdev_DISABLED/CMakeFiles/rebuild_cache.dir
-C:/Users/tanld/Desktop/fire_central/build/esp-idf/i2cdev_DISABLED/CMakeFiles/list_install_components.dir
-C:/Users/tanld/Desktop/fire_central/build/esp-idf/i2cdev_DISABLED/CMakeFiles/install.dir
-C:/Users/tanld/Desktop/fire_central/build/esp-idf/i2cdev_DISABLED/CMakeFiles/install/local.dir
-C:/Users/tanld/Desktop/fire_central/build/esp-idf/i2cdev_DISABLED/CMakeFiles/install/strip.dir
