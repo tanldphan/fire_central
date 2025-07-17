@@ -1,31 +1,44 @@
+// ESP-IDF SDK
+#include "esp_sleep.h"
 
 // Call headers
 #include "rtc.h"
+
+// UncleRus' drivers
 #include "ds3231.h"
 #include "i2cdev.h"
 
-static i2c_dev_t dev; // define device descriptor structure, do not touch, defined in ds3231.c
+static i2c_dev_t ds3231_handle = {0}; // define and flush
 
-void rtc_init_me(void)
+void rtc_init(void)
 {
-    i2cdev_init(); // built-in i2cdev initialization
-    ds3231_init_desc(&dev, RTC_I2C, RTC_SDA, RTC_SCL); // point ds3231 to esp gpio
+    i2cdev_init();
+    ds3231_init_desc(&ds3231_handle, RTC_I2C, RTC_SDA, RTC_SCL);
+    gpio_config(&(gpio_config_t){
+        .pin_bit_mask = 1ULL << RTC_SQW | RTC_SDA | RTC_SCL,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    });
 }
 
-// Get RTC's clock time and check if read ok
-bool rtc_get_time(struct tm *current_rtc_rt) // standard C time structure tm
-{
-    return ds3231_get_time(&dev, current_rtc_rt) == ESP_OK;
+void rtc_set_time(const struct tm *time)
+{   
+    ds3231_set_time(&ds3231_handle, time);
 }
 
-// Set RTC's internal clock to fetched real time and check if write ok
-bool rtc_set_time(const struct tm *server_rt)
+void rtc_set_alarm(const struct tm *time)
 {
-    return ds3231_set_time(&dev, server_rt) == ESP_OK;
+    ds3231_clear_alarm_flags(&ds3231_handle, DS3231_ALARM_1);
+    ds3231_clear_alarm_flags(&ds3231_handle, DS3231_ALARM_2);
+    ds3231_set_alarm(&ds3231_handle, DS3231_ALARM_1, time, DS3231_ALARM1_MATCH_SECMINHOUR, NULL, 0);
+    ds3231_enable_alarm_ints(&ds3231_handle, DS3231_ALARM_1);
+    esp_sleep_enable_ext0_wakeup(RTC_SQW, 0); // Wake on LOW
 }
 
-// Set RTC next alarm using RTC's precise Alarm1 -- leave Alarm2 untouched
-bool rtc_set_alarm(const struct tm *next_alarm)
+void rtc_to_dsleep()
 {
-    return ds3231_set_alarm(&dev, DS3231_ALARM_1, next_alarm, DS3231_ALARM1_MATCH_SECMINHOUR, NULL,0) == ESP_OK;
+    i2cdev_done(); // clear any semaphores
+    esp_deep_sleep_start();
 }

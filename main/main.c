@@ -31,7 +31,7 @@
 #include "wind_speed.h"
 
 // Log tags
-#define TAG_MONITOR "MONITOR"
+#define TAG_MAIN "MONITOR"
 
 // Definitions
 static TaskHandle_t monitoring_task;
@@ -51,22 +51,41 @@ static void send_sensor_data_request_ping(uint8_t* sensor_node);
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet);
 static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes(void);
-//static void print_sensor_nodes(void);
 
-
-// DUMMY SCHEDULE DURING WAKE TIME
+// Batch and run-thru intervals
 #define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
-#define SENSOR_BATCH_INTERVAL 1000 * 60 * 40 //minutes ----> allows multiple batche/attempts during wake time
+#define SENSOR_BATCH_INTERVAL 1000 * 60 * 40 //minutes ----> allows multiple batches/attempts during wake time
 
 // Initialize wind data
 float wind_speed = 0;
 uint8_t wind_direction_indexed = 16;
 
+// Dummy server real time
+struct tm server_rt = {
+    .tm_year = 2025 - 1900,
+    .tm_mon  = 1,
+    .tm_mday = 1,
+    .tm_hour = 1,
+    .tm_min  = 1,
+    .tm_sec  = 1
+};
+// Dummy server next alarm 30s
+struct tm server_alarm =
+{
+    .tm_year = 2025 - 1900,
+    .tm_mon  = 6,   // July
+    .tm_mday = 14,
+    .tm_hour = 15,
+    .tm_min  = 0,
+    .tm_sec  = 30
+};
+
+
 // BOOT SEQUENCE
 void app_main(void)
 {
     esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address
-    ESP_LOGI(TAG_MONITOR, "Node MAC: %02x%02x%02x%02x%02x%02x\n",
+    ESP_LOGI(TAG_MAIN, "Node MAC: %02x%02x%02x%02x%02x%02x\n",
         mac_esp[0], mac_esp[1], mac_esp[2],
         mac_esp[3], mac_esp[4], mac_esp[5]);
 
@@ -74,10 +93,13 @@ void app_main(void)
     nvs_flash_init(); // ESP's non-volatile storage
     lora_init();
     wifi_init();
-
+    // wifi needs to be fully up so mqtt can run
     vTaskDelay(pdMS_TO_TICKS(5000));
     mqtt_init();
-    rtc_init_me();
+    rtc_init();
+
+    rtc_set_time(&server_rt); // Set RTC's clock to server's real time
+
     wind_direction_init();
     wind_speed_init();
 
@@ -88,6 +110,13 @@ void app_main(void)
     xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
     xTaskCreate(update_sensor_nodes, "Update", 1024 * 5, NULL, 6, &update_task);
     xTaskCreate(get_wind_data, "Central Wind", 1024 *5, NULL, 5, &wind_task);
+    rtc_set_alarm(&server_alarm);
+    // Dummy sleep
+    vTaskDelay(pdMS_TO_TICKS(1000 * 30));
+    vTaskDelete(monitoring_task);
+    vTaskDelete(update_task);
+    vTaskDelete(wind_task);
+    rtc_to_dsleep();
 }
 
 // CORE FUNCTIONS:
@@ -236,11 +265,11 @@ static void update_sensor_nodes()
                     hex_array_to_byte_array (iter, sensor_nodes[nodes_recorded], MAC_SIZE * 2);
                     ++nodes_recorded;
                 }
-                ESP_LOGI (TAG_MONITOR, "Child nodes reassigned. Old Count=%d New Count=%d", sensor_nodes_count, new_sensor_nodes_count);
+                ESP_LOGI (TAG_MAIN, "Child nodes reassigned. Old Count=%d New Count=%d", sensor_nodes_count, new_sensor_nodes_count);
                 sensor_nodes_count = new_sensor_nodes_count;
             }
             else
-            ESP_LOGW (TAG_MONITOR, "Updated sensor_nodes_count=%d is not <= to MAX_SENSOR_NODES_COUNT=%d", new_sensor_nodes_count, MAX_SENSOR_NODES_COUNT);
+            ESP_LOGW (TAG_MAIN, "Updated sensor_nodes_count=%d is not <= to MAX_SENSOR_NODES_COUNT=%d", new_sensor_nodes_count, MAX_SENSOR_NODES_COUNT);
             xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
             sensor_nodes_update_status = 0;
         }

@@ -22,8 +22,7 @@ IN-USE:
 6, 7: wind direction
 15: wind data direction control
 12, 13, 34-36: LORA
-37, 38: RTC
-
+10, 11, 21: RTC
 
 i2cdev.c MODIFIED:
 
