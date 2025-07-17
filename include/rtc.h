@@ -13,6 +13,7 @@
 #define RTC "RTC"
 
 // Global functions
-bool rtc_init(void);
-bool rtc_fetch_time(const struct tm *server_rt);
-bool rtc_set_alarm(const struct tm *next_alarm);
+void rtc_ext_init(void);
+void rtc_set_time(const struct tm *time);
+void rtc_set_alarm(const struct tm *time);
+void rtc_to_dsleep(void);

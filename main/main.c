@@ -96,7 +96,7 @@ void app_main(void)
     // wifi needs to be fully up so mqtt can run
     vTaskDelay(pdMS_TO_TICKS(5000));
     mqtt_init();
-    rtc_init();
+    rtc_ext_init();
 
     rtc_set_time(&server_rt); // Set RTC's clock to server's real time
 

@@ -10,7 +10,7 @@
 
 static i2c_dev_t ds3231_handle = {0}; // define and flush
 
-void rtc_init(void)
+void rtc_ext_init(void)
 {
     i2cdev_init();
     ds3231_init_desc(&ds3231_handle, RTC_I2C, RTC_SDA, RTC_SCL);
