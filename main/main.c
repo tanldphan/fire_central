@@ -31,7 +31,7 @@
 #include "wind_speed.h"
 
 // Log tags
-#define TAG_MAIN "MONITOR"
+#define TAG_MAIN "MAIN"
 
 // Definitions
 static TaskHandle_t monitoring_task;
@@ -124,8 +124,8 @@ static void get_wind_data(void)
 {
     while(1)
     {
-        float wind_speed = get_wind_direction();
-        uint8_t wind_direction_indexed = get_wind_direction();
+        wind_speed = get_wind_direction();
+        wind_direction_indexed = get_wind_direction();
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
