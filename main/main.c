@@ -93,29 +93,32 @@ void app_main(void)
     lora_init();
     wifi_init();
     mqtt_init();
-    rtc_ext_init();
-    rtc_clear_triggered_alarm();
-    rtc_set_time(&server_rt); // Set RTC's clock to server's real time
-
     wind_direction_init();
     wind_speed_init();
+//===========================================================
+    rtc_ext_init();
+    
+    rtc_set_time(&server_rt);
 
-    // Create ESP tasks
-    // (functions, name, stack size, arguments, priority, handle reference)
+    // ESP tasks (functions, name, stack size, arguments, priority, handle reference)
     xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
     xTaskCreate(update_sensor_nodes, "Update", 1024 * 5, NULL, 6, &update_task);
     xTaskCreate(get_wind_data, "Central Wind", 1024 *5, NULL, 5, &wind_task);
     
+    // MQTT: server response with next alarm
     rtc_set_alarm(&server_alarm);
     
-    // Dummy sleep
-    vTaskDelay(pdMS_TO_TICKS(1000 * 15));
+    // Dummy wake duration
+    vTaskDelay(pdMS_TO_TICKS(1000 * 15)); // seconds
     
+    // Kill running tasks
     vTaskDelete(monitoring_task);
     vTaskDelete(update_task);
     vTaskDelete(wind_task);
     
+    // Deep sleep sequence
     rtc_to_dsleep();
+//================================================================
 }
 
 // CORE FUNCTIONS:
