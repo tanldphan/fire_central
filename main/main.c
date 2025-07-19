@@ -67,19 +67,18 @@ struct tm server_rt = {
     .tm_mday = 1,
     .tm_hour = 1,
     .tm_min  = 1,
-    .tm_sec  = 1
+    .tm_sec  = 0
 };
-// Dummy server next alarm 30s
+// Dummy server next alarm
 struct tm server_alarm =
 {
     .tm_year = 2025 - 1900,
-    .tm_mon  = 6,   // July
-    .tm_mday = 14,
-    .tm_hour = 15,
-    .tm_min  = 0,
-    .tm_sec  = 30
+    .tm_mon  = 1,
+    .tm_mday = 1,
+    .tm_hour = 1,
+    .tm_min  = 1,
+    .tm_sec  = 20
 };
-
 
 // BOOT SEQUENCE
 void app_main(void)
@@ -93,29 +92,29 @@ void app_main(void)
     nvs_flash_init(); // ESP's non-volatile storage
     lora_init();
     wifi_init();
-    // wifi needs to be fully up so mqtt can run
-    vTaskDelay(pdMS_TO_TICKS(5000));
     mqtt_init();
     rtc_ext_init();
-
+    rtc_clear_triggered_alarm();
     rtc_set_time(&server_rt); // Set RTC's clock to server's real time
 
     wind_direction_init();
     wind_speed_init();
-
-    vTaskDelay(pdMS_TO_TICKS(5000));
 
     // Create ESP tasks
     // (functions, name, stack size, arguments, priority, handle reference)
     xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
     xTaskCreate(update_sensor_nodes, "Update", 1024 * 5, NULL, 6, &update_task);
     xTaskCreate(get_wind_data, "Central Wind", 1024 *5, NULL, 5, &wind_task);
+    
     rtc_set_alarm(&server_alarm);
+    
     // Dummy sleep
-    vTaskDelay(pdMS_TO_TICKS(1000 * 30));
+    vTaskDelay(pdMS_TO_TICKS(1000 * 15));
+    
     vTaskDelete(monitoring_task);
     vTaskDelete(update_task);
     vTaskDelete(wind_task);
+    
     rtc_to_dsleep();
 }
 

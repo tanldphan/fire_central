@@ -13,14 +13,21 @@ static i2c_dev_t ds3231_handle = {0}; // define and flush
 void rtc_ext_init(void)
 {
     i2cdev_init();
+
     ds3231_init_desc(&ds3231_handle, RTC_I2C, RTC_SDA, RTC_SCL);
     gpio_config(&(gpio_config_t){
-        .pin_bit_mask = 1ULL << RTC_SQW | RTC_SDA | RTC_SCL,
+        .pin_bit_mask = 1ULL << RTC_SQW,
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE
     });
+}
+
+void rtc_clear_triggered_alarm()
+{
+    ds3231_clear_alarm_flags(&ds3231_handle, DS3231_ALARM_1);
+    ds3231_clear_alarm_flags(&ds3231_handle, DS3231_ALARM_2);
 }
 
 void rtc_set_time(const struct tm *time)
