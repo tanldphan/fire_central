@@ -15,5 +15,6 @@
 // Global functions
 void rtc_ext_init(void);
 void rtc_set_time(const struct tm *time);
+void rtc_get_time(const struct tm *time);
 void rtc_set_alarm(const struct tm *time);
 void rtc_to_dsleep(void);

@@ -20,6 +20,7 @@
 #include "portmacro.h"
 #include "driver/i2c.h"
 #include "esp_efuse.h"
+#include "esp_sleep.h"
 
 // Call headers
 #include "lora.h"
@@ -38,7 +39,7 @@ static TaskHandle_t monitoring_task;
 static TaskHandle_t update_task;
 static TaskHandle_t wind_task;
 
-static uint8_t sensor_nodes[MAX_SENSOR_NODES_COUNT][MAC_SIZE] = {0}; // defines dimensions and flushes array.
+static uint8_t sensor_nodes[MAX_SENSOR_NODES_COUNT][MAC_SIZE] = {0}; // size and flush
 static uint8_t sensor_nodes_count = 0; // assign node count here.
 
 static char mqtt_packet[200];
@@ -54,7 +55,7 @@ static void clear_sensor_nodes(void);
 
 // Batch and run-thru intervals
 #define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
-#define SENSOR_BATCH_INTERVAL 1000 * 60 * 40 //minutes ----> allows multiple batches/attempts during wake time
+#define SENSOR_BATCH_INTERVAL 1000 * 60 * 40 //minutes
 
 // Initialize wind data
 float wind_speed = 0;
@@ -70,15 +71,8 @@ struct tm server_rt = {
     .tm_sec  = 0
 };
 // Dummy server next alarm
-struct tm server_alarm =
-{
-    .tm_year = 2025 - 1900,
-    .tm_mon  = 1,
-    .tm_mday = 1,
-    .tm_hour = 1,
-    .tm_min  = 1,
-    .tm_sec  = 20
-};
+struct tm server_alarm;
+ds3231_clear_alarm_flags(&handle, DS3231_ALARM_1);
 
 // BOOT SEQUENCE
 void app_main(void)
@@ -98,14 +92,21 @@ void app_main(void)
 //===========================================================
     rtc_ext_init();
     
+    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
+    {
     rtc_set_time(&server_rt);
+    }
+
+    // Dummy MQTT alarm
+    rtc_get_time(&server_alarm);
+    server_alarm.tm_min += 1;
+    mktime(&server_alarm);
 
     // ESP tasks (functions, name, stack size, arguments, priority, handle reference)
     xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
     xTaskCreate(update_sensor_nodes, "Update", 1024 * 5, NULL, 6, &update_task);
     xTaskCreate(get_wind_data, "Central Wind", 1024 *5, NULL, 5, &wind_task);
     
-    // MQTT: server response with next alarm
     rtc_set_alarm(&server_alarm);
     
     // Dummy wake duration
