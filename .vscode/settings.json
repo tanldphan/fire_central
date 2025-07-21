@@ -5,7 +5,9 @@
   "files.associations": {
     "wind_speed.h": "c",
     "mqtt.h": "c",
-    "esp_wifi.h": "c"
+    "esp_wifi.h": "c",
+    "stdbool.h": "c",
+    "freertos.h": "c"
   },
   "C_Cpp.errorSquiggles": "disabled"
 }

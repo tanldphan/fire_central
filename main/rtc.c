@@ -13,12 +13,11 @@ static i2c_dev_t ds3231_handle = {0}; // define and flush
 void rtc_ext_init(void)
 {
     i2cdev_init();
-
     ds3231_init_desc(&ds3231_handle, RTC_I2C, RTC_SDA, RTC_SCL);
     ds3231_clear_alarm_flags(&ds3231_handle, DS3231_ALARM_1);
     ds3231_clear_alarm_flags(&ds3231_handle, DS3231_ALARM_2);
-    ds3231_disable_32khz(&ds3231_handle);
-    ds3231_disable_squarewave(&ds3231_handle);
+    // ds3231_disable_32khz(&ds3231_handle);
+    // ds3231_disable_squarewave(&ds3231_handle);
     gpio_config(&(gpio_config_t){
         .pin_bit_mask = 1ULL << RTC_SQW,
         .mode = GPIO_MODE_INPUT,
@@ -28,17 +27,17 @@ void rtc_ext_init(void)
     });
 }
 
-void rtc_set_time(const struct tm *time)
+void rtc_set_time(struct tm *time)
 {   
     ds3231_set_time(&ds3231_handle, time);
 }
 
-void rtc_get_time(const struct tm *time)
+void rtc_get_time(struct tm *time)
 {
     ds3231_get_time(&ds3231_handle, time);
 }
 
-void rtc_set_alarm(const struct tm *time)
+void rtc_set_alarm(struct tm *time)
 {
     ds3231_clear_alarm_flags(&ds3231_handle, DS3231_ALARM_1);
     ds3231_clear_alarm_flags(&ds3231_handle, DS3231_ALARM_2);

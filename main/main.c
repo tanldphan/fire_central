@@ -52,6 +52,7 @@ static void send_sensor_data_request_ping(uint8_t* sensor_node);
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet);
 static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes(void);
+static void fallback_dsleep(void *nothing);
 
 // Batch and run-thru intervals
 #define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
@@ -70,59 +71,59 @@ struct tm server_rt = {
     .tm_min  = 1,
     .tm_sec  = 0
 };
-// Dummy server next alarm
-struct tm server_alarm;
-ds3231_clear_alarm_flags(&handle, DS3231_ALARM_1);
 
 // BOOT SEQUENCE
 void app_main(void)
 {
+    rtc_ext_init(); // must initialize RTC before wifi or INT will hold LOW
+    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
+    {
+        rtc_set_time(&server_rt);
+    }
+
     esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address
     ESP_LOGI(TAG_MAIN, "Node MAC: %02x%02x%02x%02x%02x%02x\n",
         mac_esp[0], mac_esp[1], mac_esp[2],
         mac_esp[3], mac_esp[4], mac_esp[5]);
 
     // Initialize functions
-    nvs_flash_init(); // ESP's non-volatile storage
-    lora_init();
-    wifi_init();
-    mqtt_init();
-    wind_direction_init();
-    wind_speed_init();
-//===========================================================
-    rtc_ext_init();
-    
-    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
-    {
-    rtc_set_time(&server_rt);
-    }
+    nvs_flash_init(); // ESP's non-volatile storage, almost instant
+    lora_init(); // max ~250ms delay
+    wifi_init(); // ~5-6s delay, depends on # of retries
+    mqtt_init(); // does not halt, async, runs in background
+    wind_direction_init(); // instant
+    wind_speed_init(); // instant
 
-    // Dummy MQTT alarm
-    rtc_get_time(&server_alarm);
-    server_alarm.tm_min += 1;
-    mktime(&server_alarm);
+    // Fallback alarm
+    struct tm fallback_alarm;
+    rtc_get_time(&fallback_alarm);
+    fallback_alarm.tm_sec += 30;
+    mktime(&fallback_alarm);
+    rtc_set_alarm(&fallback_alarm);
 
+    xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
+
+    // Important: sensor node related tasks will block whatever comes after it -- at least when they fail (to be tested).
+    // get_wind_data does not block
     // ESP tasks (functions, name, stack size, arguments, priority, handle reference)
     xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
     xTaskCreate(update_sensor_nodes, "Update", 1024 * 5, NULL, 6, &update_task);
     xTaskCreate(get_wind_data, "Central Wind", 1024 *5, NULL, 5, &wind_task);
-    
-    rtc_set_alarm(&server_alarm);
-    
-    // Dummy wake duration
-    vTaskDelay(pdMS_TO_TICKS(1000 * 15)); // seconds
-    
-    // Kill running tasks
-    vTaskDelete(monitoring_task);
-    vTaskDelete(update_task);
-    vTaskDelete(wind_task);
-    
-    // Deep sleep sequence
-    rtc_to_dsleep();
-//================================================================
+    // TO BE INTEGRATED: Task to override fallback_alarm with server_alarm
 }
 
 // CORE FUNCTIONS:
+
+static void fallback_dsleep(void *nothing)
+{
+    vTaskDelay(pdMS_TO_TICKS(1000 *15));
+    if (monitoring_task) vTaskDelete(monitoring_task);
+    if (update_task)     vTaskDelete(update_task);
+    if (wind_task)       vTaskDelete(wind_task);
+
+    rtc_to_dsleep();
+}
+
 static void get_wind_data(void)
 {
     while(1)
