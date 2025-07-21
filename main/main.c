@@ -110,6 +110,7 @@ void app_main(void)
     xTaskCreate(update_sensor_nodes, "Update", 1024 * 5, NULL, 6, &update_task);
     xTaskCreate(get_wind_data, "Central Wind", 1024 *5, NULL, 5, &wind_task);
     // TO BE INTEGRATED: Task to override fallback_alarm with server_alarm
+    // TO BE INTEGRATED: Write server_rt into RTC's clock
 }
 
 // CORE FUNCTIONS:
