@@ -199,7 +199,7 @@ static void sensor_data_collection()
     {
         lora_packet_u sensor_data_packet = {0}; // defines and flushes sensor_data_packet.
         int waited_ms = 0; // initialize time waited.
-        if (sensor_nodes_count < 1) 
+        if (sensor_nodes_count < 1)
         {
             ESP_LOGI(pcTaskGetName(NULL), "Waiting for Node Assignment...");
             vTaskDelay(pdMS_TO_TICKS(1000));
@@ -285,6 +285,6 @@ static void update_sensor_nodes()
             xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
             sensor_nodes_update_status = 0;
         }
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }

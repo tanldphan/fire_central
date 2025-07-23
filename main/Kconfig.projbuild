@@ -1,0 +1,70 @@
+menu "Central Node Configuration"
+
+menu "WiFi Configuration"
+        choice WIFI_MODE
+            prompt "Wifi Mode Selection"
+            default REGULAR_WIFI
+            help
+                PEAP is used for protected networks (eduroam).
+            config REGULAR_WIFI
+                bool "Regular WiFi"
+            config PEAP_WIFI
+                bool "PEAP WiFi"
+            endchoice
+
+        config WIFI_SSID
+        string "WiFi SSID"
+        default "wifi_ssid"
+        help
+            SSID (the network name) for the desired network.
+
+        config WIFI_PASSWORD
+        string "WiFi Password"
+        default "wifi_password"
+        help
+            The password for the desired network.
+
+        if PEAP_WIFI
+            config PEAP_WIFI_USERNAME
+            string "PEAP WiFi Username"
+            default "username"
+            help
+                Username for PEAP network (csuf email for eduroam).
+            endif
+
+        config MAXIMUM_RETRY
+        int "Maximum Connect Retry"
+        default 10
+        help
+            Maximum amount of time for wifi to try to connect before
+            quiting.
+
+endmenu
+
+    menu "Pin Definitions"
+
+        menu "Normal LoRa"
+            config NORMAL_LORA_RST_GPIO
+            int "NORMAL_LORA_RST_GPIO"
+            default 6
+
+            config NORMAL_LORA_CS_GPIO
+            int "NORMAL_LORA_CS_GPIO"
+            default 7
+
+            config NORMAL_LORA_MOSI_GPIO
+            int "NORMAL_LORA_MOSI_GPIO"
+            default 15
+
+            config NORMAL_LORA_MISO_GPIO
+            int "NORMAL_LORA_MISO_GPIO"
+            default 16
+
+            config NORMAL_LORA_SCK_GPIO
+            int "NORMAL_LORA_SCK_GPIO"
+            default 17
+        endmenu
+
+    endmenu
+
+endmenu    

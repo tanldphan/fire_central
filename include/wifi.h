@@ -15,9 +15,10 @@
 #include "freertos/event_groups.h"
 
 // Credentials
-#define WIFI_SSID "7 Leaves Cafe Guest"
-#define WIFI_PASSWORD "7leavescafe24"
-#define MAXIMUM_RETRY 5
+#define WIFI_SSID CONFIG_WIFI_SSID
+#define WIFI_PASSWORD CONFIG_WIFI_PASSWORD
+#define CONFIG_REGULAR_WIFI
+#define MAXIMUM_RETRY 10
 
 // PEAP enabled case
 #ifdef CONFIG_PEAP_WIFI // is on

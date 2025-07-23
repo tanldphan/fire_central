@@ -6,7 +6,7 @@ static int retry_count = 0;
 static EventGroupHandle_t wifi_event_group;
 
 
-void wifi_init ()
+void wifi_init()
 {
     ESP_ERROR_CHECK (esp_netif_init ());
     wifi_event_group = xEventGroupCreate ();
@@ -19,22 +19,48 @@ void wifi_init ()
     ESP_ERROR_CHECK (esp_event_handler_register (IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, NULL));
 
     // Configure WiFi as a station.
-    wifi_config_t wifi_cfg = { .sta = { .ssid = WIFI_SSID,
-#ifdef CONFIG_REGULAR_WIFI
-                                        .password = WIFI_PASSWORD,
-                                        .scan_method = WIFI_FAST_SCAN
-#endif
-                               } };
+    // wifi_config_t wifi_cfg = { .sta = { .ssid = WIFI_SSID,
+    //         #ifdef CONFIG_REGULAR_WIFI
+    //             .password = "123456789", // <<<<<<<<<<<<!!!
+    //             .scan_method = WIFI_ALL_CHANNEL_SCAN,
+    //             .threshold =
+    //             {
+    //                 .rssi = -127,
+    //                 .authmode = WIFI_AUTH_WPA2_PSK,
+    //             },
+    //             .pmf_cfg =
+    //             {
+    //                 .capable = true,
+    //                 .required = false,
+    //             }
+    //         #endif
+    //    }
+    // };
+
+    wifi_config_t wifi_cfg = { 0 };  // Zero-initialize the whole struct
+    strcpy((char*)wifi_cfg.sta.ssid, WIFI_SSID);
+
+    #ifdef CONFIG_REGULAR_WIFI
+    strcpy((char*)wifi_cfg.sta.password, WIFI_PASSWORD);
+    wifi_cfg.sta.scan_method = WIFI_FAST_SCAN;
+    // wifi_cfg.sta.threshold.rssi = -127;
+    // wifi_cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    // wifi_cfg.sta.pmf_cfg.capable = true;
+    // wifi_cfg.sta.pmf_cfg.required = false;
+    #endif
+
     // If using Protected EAP WiFi network.
-#ifdef CONFIG_PEAP_WIFI
-    esp_eap_client_set_username ((uint8_t*) CONFIG_PEAP_WIFI_USERNAME, strlen (CONFIG_PEAP_WIFI_USERNAME));
-    esp_eap_client_set_identity ((uint8_t*) PEAP_WIFI_IDENTITY, strlen (PEAP_WIFI_IDENTITY));
-    esp_eap_client_set_password ((uint8_t*) WIFI_PASSWORD, strlen (WIFI_PASSWORD));
-    esp_wifi_sta_enterprise_enable ();
-#endif
+    #ifdef CONFIG_PEAP_WIFI
+        esp_eap_client_set_username ((uint8_t*) CONFIG_PEAP_WIFI_USERNAME, strlen (CONFIG_PEAP_WIFI_USERNAME));
+        esp_eap_client_set_identity ((uint8_t*) PEAP_WIFI_IDENTITY, strlen (PEAP_WIFI_IDENTITY));
+        esp_eap_client_set_password ((uint8_t*) WIFI_PASSWORD, strlen (WIFI_PASSWORD));
+        esp_wifi_sta_enterprise_enable ();
+    #endif
+
     // Set the WiFi mode as a station.
     ESP_ERROR_CHECK (esp_wifi_set_mode (WIFI_MODE_STA));
     ESP_ERROR_CHECK (esp_wifi_set_config (WIFI_IF_STA, &wifi_cfg));
+    ESP_LOGI(TAG_WIFI, "SSID: %s, PASS: %s", wifi_cfg.sta.ssid, wifi_cfg.sta.password);
     ESP_ERROR_CHECK (esp_wifi_start ());
 
     ESP_LOGI (TAG_WIFI, "Initializing wifi station finished.");
@@ -58,16 +84,14 @@ void wifi_init ()
 }
 
 
-// WiFi event handler. Monitors events and acts accordingly based on the
-// statements below.
+// WiFi event handler. Monitors events and acts accordingly based on the statements below.
 void wifi_event_handler (void* handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
         ESP_LOGI (TAG_WIFI, "WiFi Station Started.");
-        // Once the WiFi station is setup and started, try connecting to the
-        // network.
-        esp_wifi_connect ();
+        // Once the WiFi station is setup and started, try connecting to the network.
+        esp_wifi_connect();
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
     {
@@ -75,7 +99,8 @@ void wifi_event_handler (void* handler_arg, esp_event_base_t event_base, int32_t
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        ESP_LOGW (TAG_WIFI, "WiFi Station Disconnected.");
+        wifi_event_sta_disconnected_t* disconn = (wifi_event_sta_disconnected_t*) event_data;
+        ESP_LOGW(TAG_WIFI, "Disconnected. Reason: %d", disconn->reason);
         if (retry_count < MAXIMUM_RETRY)
         {
             esp_wifi_connect ();
@@ -100,4 +125,3 @@ void wifi_event_handler (void* handler_arg, esp_event_base_t event_base, int32_t
         xEventGroupSetBits (wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
-
