@@ -5,13 +5,26 @@
 
 #include "wind_direction.h"
 
+static adc_oneshot_unit_handle_t adc_handle;
+
 void wind_direction_init()
 {
-    adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(WIND_DIRECTION_ADC, ADC_ATTEN_DB_11);
+    adc_oneshot_unit_init_cfg_t unit_cfg =
+    {
+        .unit_id = ADC_UNIT_1,
+    };
+    adc_oneshot_new_unit(&unit_cfg, &adc_handle);
+
+    adc_oneshot_chan_cfg_t chan_cfg = {
+        .bitwidth = ADC_BITWIDTH_12,
+        .atten = ADC_ATTEN_DB_12,
+    };
+    adc_oneshot_config_channel(adc_handle, WIND_DIRECTION_ADC, &chan_cfg);
 }
 
 float get_wind_direction()
 {
-    return adc1_get_raw(WIND_DIRECTION_ADC) / 4095.0f * 360.0f;
+    int adc_read; // 0 to 4095 possible analog reads
+    adc_oneshot_read(adc_handle, WIND_DIRECTION_ADC, &adc_read);
+    return adc_read / 4095.0f * 360.0f;
 }

@@ -3,8 +3,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-static struct tm server_time = {0}; // initialize server time, flushes
-static bool time_received = false; // initialize time fetch verify
+// static struct tm server_time = {0}; // initialize server time, flushes
+// static bool time_received = false; // initialize time fetch verify
 
 // Call headers
 #include "mqtt.h"

@@ -40,7 +40,7 @@ static TaskHandle_t update_task;
 static TaskHandle_t wind_task;
 
 static uint8_t sensor_nodes[MAX_SENSOR_NODES_COUNT][MAC_SIZE] = {0}; // size and flush
-static uint8_t sensor_nodes_count = 0; // assign node count here.
+static uint8_t sensor_nodes_count = 1; // assign node count here.
 
 static char mqtt_packet[200];
 
@@ -60,7 +60,7 @@ static void fallback_dsleep(void *nothing);
 
 // Initialize wind data
 float wind_speed = 0;
-uint8_t wind_direction_indexed = 16;
+float wind_direction = 0;
 
 // Dummy server real time
 struct tm server_rt = {
@@ -96,17 +96,17 @@ void app_main(void)
         mac_esp[0], mac_esp[1], mac_esp[2],
         mac_esp[3], mac_esp[4], mac_esp[5]);
 
+    // TEST SENSOR -- HARDCODED, NO MQTT
+    uint8_t sensor_1[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe5, 0xd0, 0xdc};
+    memcpy(sensor_nodes[0], sensor_1, MAC_SIZE);
+
     // Initialize functions
     nvs_flash_init(); // ESP's non-volatile storage, almost instant
-    ESP_LOGW("HEADS-UP", "Calling lora_init() in 5s");
-    vTaskDelay(pdMS_TO_TICKS(5000));
     lora_init(); // max ~250ms delay
     wifi_init(); // ~5-6s delay, depends on # of retries
     mqtt_init(); // does not halt, async, runs in background
     wind_direction_init(); // instant
     wind_speed_init(); // instant
-
-
 
     // Important: sensor node related tasks will block whatever comes after it -- at least when they fail (to be tested).
     // get_wind_data does not block
@@ -136,7 +136,8 @@ static void get_wind_data(void)
     while(1)
     {
         wind_speed = get_wind_speed();
-        wind_direction_indexed = get_wind_direction();
+        wind_direction = get_wind_direction();
+        ESP_LOGD("WIND", "Wind speed: %f m/s @ deg: %f", wind_speed, wind_direction);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
@@ -152,7 +153,7 @@ static void send_sensor_data_request_ping(uint8_t *sensor_node)
 
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet)
 {
-    sprintf(mqtt_packet, "%02x%02x%02x%02x%02x%02x,%ld,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%0.2f,%d",
+    sprintf(mqtt_packet, "%02x%02x%02x%02x%02x%02x,%ld,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%0.2f,%f",
         lora_sensor_data_packet->readings.mac[0], lora_sensor_data_packet->readings.mac[1],
         lora_sensor_data_packet->readings.mac[2], lora_sensor_data_packet->readings.mac[3],
         lora_sensor_data_packet->readings.mac[4], lora_sensor_data_packet->readings.mac[5],
@@ -167,7 +168,7 @@ static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet)
         lora_sensor_data_packet->readings.pms_reading.pms_atm_2_5,
         lora_sensor_data_packet->readings.pms_reading.pms_atm_10,
         wind_speed,
-        wind_direction_indexed);
+        wind_direction);
     printf("To be sent: %.*s\n", sizeof(mqtt_packet), mqtt_packet);
 }
 
