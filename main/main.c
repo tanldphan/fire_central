@@ -78,8 +78,18 @@ void app_main(void)
     rtc_ext_init(); // must initialize RTC before wifi or INT will hold LOW
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
     {
+        ESP_LOGW("RTC WARNING", "COLD BOOT -- SETTING CLOCK");
         rtc_set_time(&server_rt);
     }
+
+    // Fallback alarm
+    struct tm fallback_alarm;
+    rtc_get_time(&fallback_alarm);
+    fallback_alarm.tm_sec += 60;
+    mktime(&fallback_alarm);
+    rtc_set_alarm(&fallback_alarm);
+
+    xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
 
     esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address
     ESP_LOGI(TAG_MAIN, "Node MAC: %02x%02x%02x%02x%02x%02x\n",
@@ -88,20 +98,15 @@ void app_main(void)
 
     // Initialize functions
     nvs_flash_init(); // ESP's non-volatile storage, almost instant
+    ESP_LOGW("HEADS-UP", "Calling lora_init() in 5s");
+    vTaskDelay(pdMS_TO_TICKS(5000));
     lora_init(); // max ~250ms delay
     wifi_init(); // ~5-6s delay, depends on # of retries
     mqtt_init(); // does not halt, async, runs in background
     wind_direction_init(); // instant
     wind_speed_init(); // instant
 
-    // Fallback alarm
-    struct tm fallback_alarm;
-    rtc_get_time(&fallback_alarm);
-    fallback_alarm.tm_sec += 30;
-    mktime(&fallback_alarm);
-    rtc_set_alarm(&fallback_alarm);
 
-    xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
 
     // Important: sensor node related tasks will block whatever comes after it -- at least when they fail (to be tested).
     // get_wind_data does not block
@@ -117,7 +122,8 @@ void app_main(void)
 
 static void fallback_dsleep(void *nothing)
 {
-    vTaskDelay(pdMS_TO_TICKS(1000 *15));
+    vTaskDelay(pdMS_TO_TICKS(1000 *30)); // Dummy wake duration
+    // Sleep duration = +alarm - dummy wake
     if (monitoring_task) vTaskDelete(monitoring_task);
     if (update_task)     vTaskDelete(update_task);
     if (wind_task)       vTaskDelete(wind_task);
@@ -129,7 +135,7 @@ static void get_wind_data(void)
 {
     while(1)
     {
-        wind_speed = get_wind_direction();
+        wind_speed = get_wind_speed();
         wind_direction_indexed = get_wind_direction();
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -278,5 +284,6 @@ static void update_sensor_nodes()
             xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
             sensor_nodes_update_status = 0;
         }
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }

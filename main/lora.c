@@ -93,7 +93,13 @@ int lora_init(void)
                                           .flags = 0,
                                           .pre_cb = NULL };
     ret = spi_bus_add_device (LORA_SPI, &dev, &_spi);
-    assert (ret == ESP_OK);
+    //assert (ret == ESP_OK);
+
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG_LORA, "SPI init failed: %s", esp_err_to_name(ret));
+        return 0;
+    }
     lora_reset ();
 
     // Check Version

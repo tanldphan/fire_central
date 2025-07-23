@@ -14,12 +14,11 @@
 // LORA assignment
 #define LORA_SPI SPI2_HOST // LORA to free SPI channel
 
-#define LORA_CS (12) // LORA chip select pin
-#define LORA_SCLK (13) // LORA serial clock pin
-#define LORA_MOSI (34) // LORA receive pin
-#define LORA_MISO (35) // LORA transmit pin
-
-#define LORA_RST (36) // LORA reset pin
+#define LORA_RST (8) // white
+#define LORA_CS (9) // purple
+#define LORA_MOSI (16) // orange
+#define LORA_MISO (17) // green
+#define LORA_SCLK (18) // blue
 
 // LORA model registers:
 
