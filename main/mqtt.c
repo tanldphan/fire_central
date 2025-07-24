@@ -28,6 +28,7 @@ void mqtt_init()
 
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = MQTT_HOST,
+        .auto_reconnect = true,
     };
     client = esp_mqtt_client_init(&mqtt_cfg);
     // Register MQTT event handler.

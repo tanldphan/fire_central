@@ -56,7 +56,7 @@ static void fallback_dsleep(void *nothing);
 
 // Batch and run-thru intervals
 #define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
-#define SENSOR_BATCH_INTERVAL 1000 * 60 * 40 //minutes
+#define SENSOR_BATCH_INTERVAL 1000 * 5 //seconds
 
 // Initialize wind data
 float wind_speed = 0;
@@ -89,7 +89,7 @@ void app_main(void)
     mktime(&fallback_alarm);
     rtc_set_alarm(&fallback_alarm);
 
-    xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
+    //xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
 
     esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address
     ESP_LOGI(TAG_MAIN, "Node MAC: %02x%02x%02x%02x%02x%02x\n",
@@ -97,7 +97,7 @@ void app_main(void)
         mac_esp[3], mac_esp[4], mac_esp[5]);
 
     // TEST SENSOR -- HARDCODED, NO MQTT
-    uint8_t sensor_1[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe5, 0xd0, 0xdc};
+    uint8_t sensor_1[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe5, 0xc6, 0x74};
     memcpy(sensor_nodes[0], sensor_1, MAC_SIZE);
 
     // Initialize functions
@@ -241,6 +241,11 @@ static void sensor_data_collection()
                 vTaskDelay(pdMS_TO_TICKS(SENSOR_NODE_INTERVAL));
             }
             ESP_LOGI(pcTaskGetName(NULL), "Batch collection done.");
+            char hex_dump[PACKET_SIZE * 2 + 1] = {0};
+            for (int i = 0; i < PACKET_SIZE; ++i) {
+            sprintf(&hex_dump[i * 2], "%02x", sensor_data_packet.raw[i]);
+            }
+            ESP_LOGW("PACKET", "Sending packet (hex): %s", hex_dump);
             vTaskDelay(pdMS_TO_TICKS(SENSOR_BATCH_INTERVAL));
         }
     }

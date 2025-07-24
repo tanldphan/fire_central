@@ -19,7 +19,7 @@
 #define MAX_SENSOR_NODES_COUNT 6 // choose how many sensor nodes assigned to central.
 #define MAX_WAIT_SECONDS_MS (5000) // choose how long to wait for sensor node response.
 #define START_OF_CHILDREN MAC_SIZE + 1
-#define MQTT_HOST "mqtt://broker_ip:1883" // My X1 Carbon
+#define MQTT_HOST "mqtt://10.42.0.184"
 
 extern esp_mqtt_event_handle_t event;
 extern uint8_t sensor_nodes_update_status;
