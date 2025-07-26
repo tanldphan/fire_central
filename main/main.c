@@ -96,7 +96,7 @@ void app_main(void)
         mac_esp[0], mac_esp[1], mac_esp[2],
         mac_esp[3], mac_esp[4], mac_esp[5]);
 
-    // TEST SENSOR -- HARDCODED, NO MQTT
+    // TEST SENSOR -- HARDCODED
     uint8_t sensor_1[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe5, 0xc6, 0x74};
     memcpy(sensor_nodes[0], sensor_1, MAC_SIZE);
 
@@ -153,23 +153,34 @@ static void send_sensor_data_request_ping(uint8_t *sensor_node)
 
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet)
 {
-    sprintf(mqtt_packet, "%02x%02x%02x%02x%02x%02x,%ld,%ld,%ld,%ld,%d,%d,%d,%d,%d,%d,%0.2f,%f",
-        lora_sensor_data_packet->readings.mac[0], lora_sensor_data_packet->readings.mac[1],
-        lora_sensor_data_packet->readings.mac[2], lora_sensor_data_packet->readings.mac[3],
-        lora_sensor_data_packet->readings.mac[4], lora_sensor_data_packet->readings.mac[5],
-        lora_sensor_data_packet->readings.bme_reading.bme_comp_temp,
-        lora_sensor_data_packet->readings.bme_reading.bme_comp_pres,
-        lora_sensor_data_packet->readings.bme_reading.bme_comp_humd,
-        lora_sensor_data_packet->readings.bme_reading.bme_comp_gas,
-        lora_sensor_data_packet->readings.pms_reading.pms_std_1_0,
-        lora_sensor_data_packet->readings.pms_reading.pms_std_2_5,
-        lora_sensor_data_packet->readings.pms_reading.pms_std_10,
-        lora_sensor_data_packet->readings.pms_reading.pms_atm_1_0,
-        lora_sensor_data_packet->readings.pms_reading.pms_atm_2_5,
-        lora_sensor_data_packet->readings.pms_reading.pms_atm_10,
+    sprintf(
+        mqtt_packet,
+        "%02x%02x%02x%02x%02x%02x,"
+
+        "%u,%u,%u,%u,%u,%u,"
+        "%.2f,%.2f,%.2f,%.2f,"
+        "%0.2f,%f",
+
+        lora_sensor_data_packet->reading.mac[0], lora_sensor_data_packet->reading.mac[1],
+        lora_sensor_data_packet->reading.mac[2], lora_sensor_data_packet->reading.mac[3],
+        lora_sensor_data_packet->reading.mac[4], lora_sensor_data_packet->reading.mac[5],
+
+        lora_sensor_data_packet->reading.pms_reading.pm1_0_std,
+        lora_sensor_data_packet->reading.pms_reading.pm2_5_std,
+        lora_sensor_data_packet->reading.pms_reading.pm10_std,
+        lora_sensor_data_packet->reading.pms_reading.pm1_0_atm,
+        lora_sensor_data_packet->reading.pms_reading.pm2_5_atm,
+        lora_sensor_data_packet->reading.pms_reading.pm10_atm,
+
+        lora_sensor_data_packet->reading.bme_reading.temp_comp,
+        lora_sensor_data_packet->reading.bme_reading.pres_comp,
+        lora_sensor_data_packet->reading.bme_reading.humd_comp,
+        lora_sensor_data_packet->reading.bme_reading.gas_comp,
+
         wind_speed,
-        wind_direction);
-    printf("To be sent: %.*s\n", sizeof(mqtt_packet), mqtt_packet);
+        wind_direction
+    );
+    printf("To be sent: %.*s\n", sizeof(mqtt_packet), mqtt_packet); 
 }
 
 static void clear_sensor_nodes (void)
