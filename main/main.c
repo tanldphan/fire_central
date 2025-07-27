@@ -1,10 +1,4 @@
-// Wind speed sensor SKU:SEN0483
-// Wind direction sensor SKU:SEN0482
-// PMS5003
-// BME680
-
 // PENDING: wifi mqtt communication with server
-// NOTE: don't trust intelliSense
 
 // C standard library
 #include <stdio.h>
@@ -32,7 +26,7 @@
 #include "wind_speed.h"
 
 // Log tags
-#define TAG_MAIN "MAIN"
+#define TAG_MAIN "MAIN.C"
 
 // Definitions
 static TaskHandle_t monitoring_task;
@@ -52,7 +46,7 @@ static void send_sensor_data_request_ping(uint8_t* sensor_node);
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet);
 static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes(void);
-static void fallback_dsleep(void *nothing);
+//static void fallback_dsleep(void *nothing);
 
 // Batch and run-thru intervals
 #define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
@@ -120,16 +114,16 @@ void app_main(void)
 
 // CORE FUNCTIONS:
 
-static void fallback_dsleep(void *nothing)
-{
-    vTaskDelay(pdMS_TO_TICKS(1000 *30)); // Dummy wake duration
-    // Sleep duration = +alarm - dummy wake
-    if (monitoring_task) vTaskDelete(monitoring_task);
-    if (update_task)     vTaskDelete(update_task);
-    if (wind_task)       vTaskDelete(wind_task);
+// static void fallback_dsleep(void *nothing)
+// {
+//     vTaskDelay(pdMS_TO_TICKS(1000 *30)); // Dummy wake duration
+//     // Sleep duration = +alarm - dummy wake
+//     if (monitoring_task) vTaskDelete(monitoring_task);
+//     if (update_task)     vTaskDelete(update_task);
+//     if (wind_task)       vTaskDelete(wind_task);
 
-    rtc_to_dsleep();
-}
+//     rtc_to_dsleep();
+// }
 
 static void get_wind_data(void)
 {
@@ -147,19 +141,22 @@ static void send_sensor_data_request_ping(uint8_t *sensor_node)
     uint8_t data_ping[MAC_SIZE] = {0};
     // insert mac
     memcpy(&data_ping, sensor_node, MAC_SIZE);
+    ESP_LOG_BUFFER_HEX("CENTRAL", data_ping, sizeof(data_ping));
+    ESP_LOGI("CENTRAL", "Sending packet size: %d", sizeof(data_ping));
     lora_send_packet(data_ping, sizeof(data_ping));
     ESP_LOGI(pcTaskGetName (NULL), "Data ping sent.");
 }
 
+
+// KNOWN ISSUE: Right now, all readings default to 0 even when there's no data.
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet)
 {
     sprintf(
         mqtt_packet,
-        "%02x%02x%02x%02x%02x%02x,"
-
-        "%u,%u,%u,%u,%u,%u,"
-        "%.2f,%.2f,%.2f,%.2f,"
-        "%0.2f,%f",
+        "MAC: %02x%02x%02x%02x%02x%02x | "
+        "PMS: %u, %u, %u, %u, %u, %u | "
+        "BME: %.2f, %.2f, %.2f, %.2f |"
+        "WIND: %.2f, %.2f",
 
         lora_sensor_data_packet->reading.mac[0], lora_sensor_data_packet->reading.mac[1],
         lora_sensor_data_packet->reading.mac[2], lora_sensor_data_packet->reading.mac[3],
@@ -203,6 +200,9 @@ static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size)
     return true;
 }
 
+
+// KNOWN ISSUES:
+// sensor_data_collection logic is flawed and is blocking MQTT communication on failed packets.
 static void sensor_data_collection()
 {
     ESP_LOGI(pcTaskGetName(NULL), "Task Started!"); // Announce current task initiation.
@@ -253,10 +253,13 @@ static void sensor_data_collection()
             }
             ESP_LOGI(pcTaskGetName(NULL), "Batch collection done.");
             char hex_dump[PACKET_SIZE * 2 + 1] = {0};
-            for (int i = 0; i < PACKET_SIZE; ++i) {
-            sprintf(&hex_dump[i * 2], "%02x", sensor_data_packet.raw[i]);
+            for (int i = 0; i < PACKET_SIZE; ++i)
+            {
+                sprintf(&hex_dump[i * 2], "%02x", sensor_data_packet.raw[i]);
             }
             ESP_LOGW("PACKET", "Sending packet (hex): %s", hex_dump);
+            prepare_packet(&sensor_data_packet);
+            mqtt_publish_reading(mqtt_packet); // forcing trash thru MQTT for testing
             vTaskDelay(pdMS_TO_TICKS(SENSOR_BATCH_INTERVAL));
         }
     }

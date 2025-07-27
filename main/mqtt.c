@@ -14,8 +14,8 @@ static const char* TAG_MQTT = "MQTT";
 
 static esp_mqtt_client_handle_t client;
 static char mac_address_hex[MAC_SIZE * 2 + 1] = { 0 };
-static const char* sensor_nodes_assign_topic = "/fire_lab/child_assignment";
-static const char* sensor_nodes_data_topic = "/fire_lab/data";
+static const char* sensor_nodes_assign_topic = "mqtt_test_fire_child";
+static const char* sensor_nodes_data_topic = "mqtt_test_fire";
 
 esp_mqtt_event_handle_t event = NULL;
 uint8_t sensor_nodes_update_status = 0;
@@ -99,6 +99,7 @@ void mqtt_event_handler(void* handler_arg, esp_event_base_t event_base, int32_t 
 
 void mqtt_publish_reading (char* message_to_host)
 {
+    ESP_LOGI(TAG_MQTT, "Publishing: %s", message_to_host);
     esp_mqtt_client_publish(client, sensor_nodes_data_topic, message_to_host, 0, 2, 0);
 }
 

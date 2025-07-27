@@ -52,7 +52,7 @@ void lora_read_reg_buffer(int reg, uint8_t* val, int len)
     out = (uint8_t*) malloc (len + 1);
     in = (uint8_t*) malloc (len + 1);
     out[0] = reg;
-    for (int i = 0; i < len; i++)
+    for (int i = 0; i < len; i++) 
     {
         out[i + 1] = 0xff;
     }
@@ -130,6 +130,7 @@ int lora_init(void)
 
     lora_set_frequency (433e6); // 433MHz
     lora_enable_crc ();
+    lora_explicit_header_mode();  // Ensure both ends use same header mode
     lora_set_coding_rate (1);
     lora_set_bandwidth (7);
     lora_set_spreading_factor (7);
