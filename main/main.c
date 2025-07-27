@@ -1,5 +1,3 @@
-// PENDING: wifi mqtt communication with server
-
 // C standard library
 #include <stdio.h>
 #include <string.h>
@@ -43,14 +41,14 @@ static void sensor_data_collection();
 static void update_sensor_nodes();
 static void get_wind_data();
 static void send_sensor_data_request_ping(uint8_t* sensor_node);
-static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet);
+static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet, bool valid, const uint8_t *mac);
 static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes(void);
 //static void fallback_dsleep(void *nothing);
 
 // Batch and run-thru intervals
 #define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
-#define SENSOR_BATCH_INTERVAL 1000 * 5 //seconds
+#define SENSOR_BATCH_INTERVAL (1000 * 5) //seconds
 
 // Initialize wind data
 float wind_speed = 0;
@@ -127,7 +125,7 @@ void app_main(void)
 
 static void get_wind_data(void)
 {
-    while(1)
+    while(true)
     {
         wind_speed = get_wind_speed();
         wind_direction = get_wind_direction();
@@ -147,10 +145,21 @@ static void send_sensor_data_request_ping(uint8_t *sensor_node)
     ESP_LOGI(pcTaskGetName (NULL), "Data ping sent.");
 }
 
-
-// KNOWN ISSUE: Right now, all readings default to 0 even when there's no data.
-static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet)
+static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet, bool valid, const uint8_t *mac)
 {
+    if (!valid)
+    {
+        snprintf(
+            mqtt_packet, sizeof(mqtt_packet),
+            "MAC: %02x%02x%02x%02x%02x%02x | "
+            "PMS: null, null, null, null, null, null | "
+            "BME: null, null, null, null | "
+            "WIND: %.2f, %.2f",
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+            wind_speed, wind_direction
+        );
+        return;
+    }
     sprintf(
         mqtt_packet,
         "MAC: %02x%02x%02x%02x%02x%02x | "
@@ -177,7 +186,7 @@ static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet)
         wind_speed,
         wind_direction
     );
-    printf("To be sent: %.*s\n", sizeof(mqtt_packet), mqtt_packet); 
+    printf("Sending to broker: %.*s\n", sizeof(mqtt_packet), mqtt_packet); 
 }
 
 static void clear_sensor_nodes (void)
@@ -200,67 +209,67 @@ static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size)
     return true;
 }
 
-
-// KNOWN ISSUES:
-// sensor_data_collection logic is flawed and is blocking MQTT communication on failed packets.
 static void sensor_data_collection()
 {
-    ESP_LOGI(pcTaskGetName(NULL), "Task Started!"); // Announce current task initiation.
-    while (1)
+    ESP_LOGI(pcTaskGetName(NULL), "Task Started!");
+
+    while(true)
     {
-        lora_packet_u sensor_data_packet = {0}; // defines and flushes sensor_data_packet.
-        int waited_ms = 0; // initialize time waited.
         if (sensor_nodes_count < 1)
         {
             ESP_LOGI(pcTaskGetName(NULL), "Waiting for Node Assignment...");
+            mqtt_publish_reading("Waiting for Node Assignment...");
             vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
         }
-        else
-        {   // Start collecting sequence
-            ESP_LOGI(pcTaskGetName(NULL), "%d nodes assigned.", sensor_nodes_count);
-            for (int i = 0; i < sensor_nodes_count; i++) // go thru each nodes.
+
+        ESP_LOGI(pcTaskGetName(NULL), "%d nodes assigned -- Collecting data.", sensor_nodes_count);
+
+        for (int i = 0; i < sensor_nodes_count; i++)
+        {
+            lora_packet_u sensor_data_packet = {0};
+            bool got_valid_packet = false;
+            int waited_ms = 0;
+
+            send_sensor_data_request_ping(sensor_nodes[i]);
+            ESP_LOGI(pcTaskGetName(NULL), "Waiting for node #%d (%02x%02x%02x%02x%02x%02x) to respond.", i + 1,
+                sensor_nodes[i][0], sensor_nodes[i][1], sensor_nodes[i][2],
+                sensor_nodes[i][3], sensor_nodes[i][4], sensor_nodes[i][5]);
+            
+            lora_receive(); // Switch LoRa to receive mode
+            while (waited_ms < MAX_WAIT_SECONDS_MS)
             {
-                // send data request ping to node
-                send_sensor_data_request_ping(sensor_nodes[i]);
-                ESP_LOGI(pcTaskGetName(NULL), "Waiting for node %d (%02x%02x%02x%02x%02x%02x) to respond.", i + 1,
-                    sensor_nodes[i][0], sensor_nodes[i][1], sensor_nodes[i][2],
-                    sensor_nodes[i][3], sensor_nodes[i][4], sensor_nodes[i][5]); // announce node address currently waiting on.
-                // switch to receive mode
-                lora_receive();
-                while (waited_ms < MAX_WAIT_SECONDS_MS)
+                vTaskDelay(pdMS_TO_TICKS(100));
+                waited_ms += 100;
+                if (lora_received() != 1)
+                    continue;
+                
+                int packet_length = lora_receive_packet(sensor_data_packet.raw, sizeof(sensor_data_packet.raw));
+
+                if (packet_length == PACKET_SIZE && validate_mac(sensor_nodes[i], sensor_data_packet.raw, packet_length))
                 {
-                    ESP_LOGD(pcTaskGetName(NULL), "Time passed: %d seconds", waited_ms / 1000);
-                    vTaskDelay(pdMS_TO_TICKS(100));
-                    // Look for response
-                    if (lora_received() == 1)
-                    {
-                        int packet_length = lora_receive_packet(sensor_data_packet.raw, sizeof(sensor_data_packet.raw));
-                        // Validate received packet
-                        if ((packet_length == PACKET_SIZE) && (validate_mac(sensor_nodes[i], sensor_data_packet.raw, packet_length) == 1))
-                        {
-                            ESP_LOGI(pcTaskGetName(NULL), "%d byte packet received.", packet_length);
-                            // Process the child sensor data received
-                            mqtt_print_packet(sensor_data_packet.raw, packet_length);
-                            prepare_packet(&sensor_data_packet);
-                            mqtt_publish_reading(mqtt_packet);
-                            break;
-                        }
-                    }
-                    waited_ms += 100;
+                    got_valid_packet = true;
+                    ESP_LOGI(pcTaskGetName(NULL), "%d byte valid packet received.", packet_length);
+                    mqtt_print_packet(sensor_data_packet.raw, packet_length);
+                    prepare_packet(&sensor_data_packet, true, NULL);
+                    mqtt_publish_reading(mqtt_packet);
+                    break;
                 }
-                waited_ms = 0; // reset wait time
-                vTaskDelay(pdMS_TO_TICKS(SENSOR_NODE_INTERVAL));
+                else
+                {
+                    ESP_LOGW("CENTRAL", "Invalid packet received.");
+                    break;
+                }
             }
-            ESP_LOGI(pcTaskGetName(NULL), "Batch collection done.");
-            char hex_dump[PACKET_SIZE * 2 + 1] = {0};
-            for (int i = 0; i < PACKET_SIZE; ++i)
+            if (!got_valid_packet)
             {
-                sprintf(&hex_dump[i * 2], "%02x", sensor_data_packet.raw[i]);
+                ESP_LOGW("CENTRAL", "No valid response from node #%d. (%02x%02x%02x%02x%02x%02x)", i + 1,
+                     sensor_nodes[i][0], sensor_nodes[i][1], sensor_nodes[i][2],
+                     sensor_nodes[i][3], sensor_nodes[i][4], sensor_nodes[i][5]);
+                prepare_packet(NULL, false, sensor_nodes[i]);
+                mqtt_publish_reading(mqtt_packet);
             }
-            ESP_LOGW("PACKET", "Sending packet (hex): %s", hex_dump);
-            prepare_packet(&sensor_data_packet);
-            mqtt_publish_reading(mqtt_packet); // forcing trash thru MQTT for testing
-            vTaskDelay(pdMS_TO_TICKS(SENSOR_BATCH_INTERVAL));
+            vTaskDelay(pdMS_TO_TICKS(SENSOR_NODE_INTERVAL));
         }
     }
 }
