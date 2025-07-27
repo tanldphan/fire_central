@@ -17,7 +17,6 @@
 // Credentials
 #define WIFI_SSID CONFIG_WIFI_SSID
 #define WIFI_PASSWORD CONFIG_WIFI_PASSWORD
-//#define CONFIG_REGULAR_WIFI
 #define MAXIMUM_RETRY 5
 
 // PEAP enabled case
