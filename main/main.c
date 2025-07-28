@@ -44,7 +44,7 @@ static void send_sensor_data_request_ping(uint8_t* sensor_node);
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet, bool valid, const uint8_t *mac);
 static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes(void);
-//static void fallback_dsleep(void *nothing);
+static void fallback_dsleep(void *nothing);
 
 // Batch and run-thru intervals
 #define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
@@ -81,7 +81,7 @@ void app_main(void)
     mktime(&fallback_alarm);
     rtc_set_alarm(&fallback_alarm);
 
-    //xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
+    xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
 
     esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address
     ESP_LOGI(TAG_MAIN, "Node MAC: %02x%02x%02x%02x%02x%02x\n",
@@ -112,16 +112,16 @@ void app_main(void)
 
 // CORE FUNCTIONS:
 
-// static void fallback_dsleep(void *nothing)
-// {
-//     vTaskDelay(pdMS_TO_TICKS(1000 *30)); // Dummy wake duration
-//     // Sleep duration = +alarm - dummy wake
-//     if (monitoring_task) vTaskDelete(monitoring_task);
-//     if (update_task)     vTaskDelete(update_task);
-//     if (wind_task)       vTaskDelete(wind_task);
+static void fallback_dsleep(void *nothing)
+{
+    vTaskDelay(pdMS_TO_TICKS(1000 *30)); // Dummy wake duration
+    // Sleep duration = +alarm - dummy wake
+    if (monitoring_task) vTaskDelete(monitoring_task);
+    if (update_task)     vTaskDelete(update_task);
+    if (wind_task)       vTaskDelete(wind_task);
 
-//     rtc_to_dsleep();
-// }
+    rtc_to_dsleep();
+}
 
 static void get_wind_data(void)
 {
