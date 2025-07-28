@@ -84,7 +84,7 @@ void app_main(void)
     xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
 
     esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address
-    ESP_LOGI(TAG_MAIN, "Node MAC: %02x%02x%02x%02x%02x%02x\n",
+    ESP_LOGI(TAG_MAIN, "Node MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
         mac_esp[0], mac_esp[1], mac_esp[2],
         mac_esp[3], mac_esp[4], mac_esp[5]);
 
@@ -151,7 +151,7 @@ static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet, b
     {
         snprintf(
             mqtt_packet, sizeof(mqtt_packet),
-            "MAC: %02x%02x%02x%02x%02x%02x | "
+            "MAC: %02x:%02x:%02x:%02x:%02x:%02x | "
             "PMS: null, null, null, null, null, null | "
             "BME: null, null, null, null | "
             "WIND: %.2f, %.2f",
@@ -162,7 +162,7 @@ static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet, b
     }
     sprintf(
         mqtt_packet,
-        "MAC: %02x%02x%02x%02x%02x%02x | "
+        "MAC: %02x:%02x:%02x:%02x:%02x:%02x | "
         "PMS: %u, %u, %u, %u, %u, %u | "
         "BME: %.2f, %.2f, %.2f, %.2f |"
         "WIND: %.2f, %.2f",
@@ -232,7 +232,7 @@ static void sensor_data_collection()
             int waited_ms = 0;
 
             send_sensor_data_request_ping(sensor_nodes[i]);
-            ESP_LOGI(pcTaskGetName(NULL), "Waiting for node #%d (%02x%02x%02x%02x%02x%02x) to respond.", i + 1,
+            ESP_LOGI(pcTaskGetName(NULL), "Waiting for node #%d (%02x:%02x:%02x:%02x:%02x:%02x) to respond.", i + 1,
                 sensor_nodes[i][0], sensor_nodes[i][1], sensor_nodes[i][2],
                 sensor_nodes[i][3], sensor_nodes[i][4], sensor_nodes[i][5]);
             
@@ -263,7 +263,7 @@ static void sensor_data_collection()
             }
             if (!got_valid_packet)
             {
-                ESP_LOGW("CENTRAL", "No valid response from node #%d. (%02x%02x%02x%02x%02x%02x)", i + 1,
+                ESP_LOGW("CENTRAL", "No valid response from node #%d. (%02x:%02x:%02x:%02x:%02x:%02x)", i + 1,
                      sensor_nodes[i][0], sensor_nodes[i][1], sensor_nodes[i][2],
                      sensor_nodes[i][3], sensor_nodes[i][4], sensor_nodes[i][5]);
                 prepare_packet(NULL, false, sensor_nodes[i]);
