@@ -24,19 +24,18 @@
 #include "wind_speed.h"
 
 // Log tags
-#define TAG_MAIN "MAIN.C"
+#define TAG_MAIN "CENTRAL - main"
 
-// Definitions
+// Declarations
 static TaskHandle_t monitoring_task;
 static TaskHandle_t update_task;
 static TaskHandle_t wind_task;
 
-static uint8_t sensor_nodes[MAX_SENSOR_NODES_COUNT][MAC_SIZE] = {0}; // size and flush
+static uint8_t sensor_nodes[MAX_SENSOR_NODES_COUNT][MAC_SIZE] = {0};
 static uint8_t sensor_nodes_count = 1; // assign node count here.
 
 static char mqtt_packet[200];
 
-// Declaring loop functions for tasks
 static void sensor_data_collection();
 static void update_sensor_nodes();
 static void get_wind_data();
@@ -46,16 +45,15 @@ static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes(void);
 static void fallback_dsleep(void *nothing);
 
-// Batch and run-thru intervals
-#define SENSOR_NODE_INTERVAL 1000 // ms ----> constant for every batch, calibrate for real use
 #define SENSOR_BATCH_INTERVAL (1000 * 5) //seconds
+#define MINIMUM_WAKE_TIME (1000 * 40) // seconds
 
 // Initialize wind data
 float wind_speed = 0;
 float wind_direction = 0;
 
-// Dummy server real time
-struct tm server_rt = {
+// Dummy real time
+struct tm real_time = {
     .tm_year = 2025 - 1900,
     .tm_mon  = 1,
     .tm_mday = 1,
@@ -64,23 +62,24 @@ struct tm server_rt = {
     .tm_sec  = 0
 };
 
-// BOOT SEQUENCE
 void app_main(void)
 {
     rtc_ext_init(); // must initialize RTC before wifi or INT will hold LOW
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
     {
-        ESP_LOGW("RTC WARNING", "COLD BOOT -- SETTING CLOCK");
-        rtc_set_time(&server_rt);
+        ESP_LOGW(TAG_MAIN, "RTC Warning: COLD BOOT -- Setting clock");
+        rtc_set_time(&real_time);
     }
 
     // Fallback alarm
-    struct tm fallback_alarm;
-    rtc_get_time(&fallback_alarm);
+    struct tm fallback_alarm; // define
+    rtc_get_time(&fallback_alarm); // paste RTC's current time into alarm
+    // set alarm increment by
     fallback_alarm.tm_sec += 60;
-    mktime(&fallback_alarm);
-    rtc_set_alarm(&fallback_alarm);
+    mktime(&fallback_alarm); // normalize
+    rtc_set_alarm(&fallback_alarm); // set alarm
 
+    // Start ticking alarm to dsleep unless get overwritten
     xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
 
     esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address
@@ -88,7 +87,7 @@ void app_main(void)
         mac_esp[0], mac_esp[1], mac_esp[2],
         mac_esp[3], mac_esp[4], mac_esp[5]);
 
-    // TEST SENSOR -- HARDCODED
+    // TEST SENSORs
     uint8_t sensor_1[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe5, 0xc6, 0x74};
     memcpy(sensor_nodes[0], sensor_1, MAC_SIZE);
 
@@ -96,26 +95,26 @@ void app_main(void)
     nvs_flash_init(); // ESP's non-volatile storage, almost instant
     lora_init(); // max ~250ms delay
     wifi_init(); // ~5-6s delay, depends on # of retries
-    mqtt_init(); // does not halt, async, runs in background
+    mqtt_init(); // does not halt, runs in background
     wind_direction_init(); // instant
     wind_speed_init(); // instant
 
-    // Important: sensor node related tasks will block whatever comes after it -- at least when they fail (to be tested).
+    // Important: sensor node related tasks will block whatever comes after it
     // get_wind_data does not block
-    // ESP tasks (functions, name, stack size, arguments, priority, handle reference)
+    // ESPtasks(functions, name, stack size, arguments, priority, handle reference)
     xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
     xTaskCreate(update_sensor_nodes, "Update", 1024 * 5, NULL, 6, &update_task);
     xTaskCreate(get_wind_data, "Central Wind", 1024 *5, NULL, 5, &wind_task);
-    // TO BE INTEGRATED: Task to override fallback_alarm with server_alarm
-    // TO BE INTEGRATED: Write server_rt into RTC's clock
+    // TO-DO: Task to override fallback_alarm with server_alarm
 }
 
 // CORE FUNCTIONS:
 
 static void fallback_dsleep(void *nothing)
 {
-    vTaskDelay(pdMS_TO_TICKS(1000 *30)); // Dummy wake duration
-    // Sleep duration = +alarm - dummy wake
+    vTaskDelay(pdMS_TO_TICKS(MINIMUM_WAKE_TIME));
+    // Sleep duration = +alarm - MINIMUM_WAKE_TIME
+    // Kill tasks before dsleep
     if (monitoring_task) vTaskDelete(monitoring_task);
     if (update_task)     vTaskDelete(update_task);
     if (wind_task)       vTaskDelete(wind_task);
@@ -129,7 +128,6 @@ static void get_wind_data(void)
     {
         wind_speed = get_wind_speed();
         wind_direction = get_wind_direction();
-        ESP_LOGD("WIND", "Wind speed: %f m/s @ deg: %f", wind_speed, wind_direction);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
@@ -139,8 +137,8 @@ static void send_sensor_data_request_ping(uint8_t *sensor_node)
     uint8_t data_ping[MAC_SIZE] = {0};
     // insert mac
     memcpy(&data_ping, sensor_node, MAC_SIZE);
-    ESP_LOG_BUFFER_HEX("CENTRAL", data_ping, sizeof(data_ping));
-    ESP_LOGI("CENTRAL", "Sending packet size: %d", sizeof(data_ping));
+    ESP_LOG_BUFFER_HEX(TAG_MAIN, data_ping, sizeof(data_ping));
+    ESP_LOGI(TAG_MAIN, "Sending packet size: %d", sizeof(data_ping));
     lora_send_packet(data_ping, sizeof(data_ping));
     ESP_LOGI(pcTaskGetName (NULL), "Data ping sent.");
 }
@@ -215,7 +213,7 @@ static void sensor_data_collection()
 
     while(true)
     {
-        if (sensor_nodes_count < 1)
+        if (sensor_nodes_count < 1) // If there's no sensor assigned --> put on wait
         {
             ESP_LOGI(pcTaskGetName(NULL), "Waiting for Node Assignment...");
             mqtt_publish_reading("Waiting for Node Assignment...");
@@ -223,54 +221,58 @@ static void sensor_data_collection()
             continue;
         }
 
+        // When nodes are assigned
         ESP_LOGI(pcTaskGetName(NULL), "%d nodes assigned -- Collecting data.", sensor_nodes_count);
 
-        for (int i = 0; i < sensor_nodes_count; i++)
-        {
+        for (int i = 0; i < sensor_nodes_count; i++) // Run thru each sensor
+        {   // initialization
             lora_packet_u sensor_data_packet = {0};
             bool got_valid_packet = false;
             int waited_ms = 0;
 
-            send_sensor_data_request_ping(sensor_nodes[i]);
+            send_sensor_data_request_ping(sensor_nodes[i]); // shout targeted MAC
             ESP_LOGI(pcTaskGetName(NULL), "Waiting for node #%d (%02x:%02x:%02x:%02x:%02x:%02x) to respond.", i + 1,
                 sensor_nodes[i][0], sensor_nodes[i][1], sensor_nodes[i][2],
                 sensor_nodes[i][3], sensor_nodes[i][4], sensor_nodes[i][5]);
             
-            lora_receive(); // Switch LoRa to receive mode
+            lora_receive(); // Switch LoRa to receive mode and wait for response
             while (waited_ms < MAX_WAIT_SECONDS_MS)
             {
                 vTaskDelay(pdMS_TO_TICKS(100));
-                waited_ms += 100;
+                waited_ms += 100; // Count waiting time
                 if (lora_received() != 1)
-                    continue;
+                    continue; // Keep waiting until response
                 
                 int packet_length = lora_receive_packet(sensor_data_packet.raw, sizeof(sensor_data_packet.raw));
+                ESP_LOGI(TAG_MAIN, "%d byte packet received -- validating...", packet_length);
+                ESP_LOG_BUFFER_HEX(TAG_MAIN, sensor_data_packet.raw, packet_length);
 
+                // Verify packet
                 if (packet_length == PACKET_SIZE && validate_mac(sensor_nodes[i], sensor_data_packet.raw, packet_length))
                 {
                     got_valid_packet = true;
-                    ESP_LOGI(pcTaskGetName(NULL), "%d byte valid packet received.", packet_length);
-                    mqtt_print_packet(sensor_data_packet.raw, packet_length);
-                    prepare_packet(&sensor_data_packet, true, NULL);
-                    mqtt_publish_reading(mqtt_packet);
+                    ESP_LOGI(pcTaskGetName(NULL), "%d bytes of valid packet received.", packet_length);
+                    mqtt_print_packet(sensor_data_packet.raw, packet_length); 
+                    prepare_packet(&sensor_data_packet, true, NULL); // bundling packet data
+                    mqtt_publish_reading(mqtt_packet); // push packet to MQTT broker
                     break;
                 }
                 else
                 {
-                    ESP_LOGW("CENTRAL", "Invalid packet received.");
+                    ESP_LOGW(TAG_MAIN, "Invalid packet received.");
                     break;
                 }
             }
             if (!got_valid_packet)
             {
-                ESP_LOGW("CENTRAL", "No valid response from node #%d. (%02x:%02x:%02x:%02x:%02x:%02x)", i + 1,
+                ESP_LOGW(TAG_MAIN, "No valid response from node #%d. (%02x:%02x:%02x:%02x:%02x:%02x)", i + 1,
                      sensor_nodes[i][0], sensor_nodes[i][1], sensor_nodes[i][2],
                      sensor_nodes[i][3], sensor_nodes[i][4], sensor_nodes[i][5]);
-                prepare_packet(NULL, false, sensor_nodes[i]);
-                mqtt_publish_reading(mqtt_packet);
+                prepare_packet(NULL, false, sensor_nodes[i]); // bundling packet data with null
+                mqtt_publish_reading(mqtt_packet); // push null packet to MQTT broker
             }
-            vTaskDelay(pdMS_TO_TICKS(SENSOR_NODE_INTERVAL));
         }
+    vTaskDelay(pdMS_TO_TICKS(SENSOR_BATCH_INTERVAL));
     }
 }
 
