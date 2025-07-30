@@ -47,7 +47,7 @@ static void fallback_dsleep(void *nothing);
 
 #define SENSOR_BATCH_INTERVAL (1000 * 5) //seconds
 #define MINIMUM_WAKE_TIME (1000 * 40) // seconds
-#define PERI_PWR (19)
+//#define PERI_PWR (19)
 
 // Initialize wind data
 float wind_speed = 0;
@@ -67,15 +67,15 @@ void app_main(void)
 {
     rtc_ext_init(); // must initialize RTC before wifi or INT will hold LOW
 
-        gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << PERI_PWR),
-        .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-    gpio_config(&io_conf);
-    gpio_set_level(PERI_PWR, 0); // turn on peri power
+    // gpio_config_t io_conf = {
+    //     .pin_bit_mask = (1ULL << PERI_PWR),
+    //     .mode = GPIO_MODE_OUTPUT,
+    //     .pull_up_en = GPIO_PULLUP_ENABLE,
+    //     .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    //     .intr_type = GPIO_INTR_DISABLE
+    // };
+    // gpio_config(&io_conf);
+    // gpio_set_level(PERI_PWR, 0); // turn on peri power
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
     {
         ESP_LOGW(TAG_MAIN, "RTC Warning: COLD BOOT -- Setting clock");
