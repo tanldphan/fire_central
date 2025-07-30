@@ -7,7 +7,7 @@
 #define RTC_I2C I2C_NUM_0
 #define RTC_SDA (10)
 #define RTC_SCL (11)
-#define RTC_SQW (21)
+#define RTC_SQW (12)
 
 // Log tags
 #define RTC "RTC"

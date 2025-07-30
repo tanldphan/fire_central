@@ -1,6 +1,6 @@
 {
   "idf.espIdfPath": "C:/Users/tanld/esp/v5.4.2/esp-idf",
-  "idf.portWin": "COM6",
+  "idf.portWin": "COM5",
   "idf.flashType": "JTAG",
   "files.associations": {
     "wind_speed.h": "c",

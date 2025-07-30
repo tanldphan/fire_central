@@ -49,5 +49,6 @@ void rtc_to_dsleep()
 {
     esp_sleep_enable_ext0_wakeup(RTC_SQW, 0); // Wake on LOW
     i2cdev_done(); // clear any semaphores
+    gpio_set_level(19, 1); // cut peri power
     esp_deep_sleep_start();
 }
