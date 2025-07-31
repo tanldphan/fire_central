@@ -1,7 +1,6 @@
 // C standard library
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 // ESP-IDF included SDK
 #include "driver/uart.h"
@@ -14,8 +13,6 @@
 #include "driver/i2c.h"
 #include "esp_efuse.h"
 #include "esp_sleep.h"
-#include "esp_sntp.h"
-#include "esp_netif_sntp.h"
 
 // Call headers
 #include "lora.h"
@@ -37,9 +34,9 @@ static TaskHandle_t update_task;
 static TaskHandle_t wind_task;
 
 static uint8_t sensor_nodes[MAX_SENSOR_NODES_COUNT][MAC_SIZE] = {0};
-static uint8_t sensor_nodes_count = 1; // assign node count here.
+static uint8_t sensor_nodes_count = 2; // assign node count here.
 
-static char mqtt_packet[200];
+static char mqtt_packet[256];
 
 static void sensor_data_collection();
 static void update_sensor_nodes();
@@ -56,22 +53,20 @@ static void fallback_dsleep(void *nothing);
 // Initialize wind data
 float wind_speed = 0;
 float wind_direction = 0;
-struct tm real_time = {0};
 
 // Dummy real time
-// struct tm real_time = {
-//     .tm_year = 2025 - 1900,
-//     .tm_mon  = 1,
-//     .tm_mday = 1,
-//     .tm_hour = 1,
-//     .tm_min  = 1,
-//     .tm_sec  = 0
-// };
+struct tm real_time = {
+    .tm_year = 2025 - 1900,
+    .tm_mon  = 6,
+    .tm_mday = 31,
+    .tm_hour = 14,
+    .tm_min  = 0,
+    .tm_sec  = 0
+};
 
 void app_main(void)
 {
     rtc_ext_init(); // must initialize RTC before wifi or INT will hold LOW
-
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << PERI_PWR),
         .mode = GPIO_MODE_OUTPUT,
@@ -84,27 +79,20 @@ void app_main(void)
 
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
     {
-        ESP_LOGW(TAG_MAIN, "RTC Warning: COLD BOOT -- Syncing time from NTP");
-        sntp_init();
-        wait_for_time_sync();
-        ESP_LOGI(TAG_MAIN, "NTP Time **SYNCED**: %s", asctime(&real_time));
-    }
-    else
-    {
-        rtc_get_time(&real_time);
-        ESP_LOGI(TAG_MAIN, "RTC Time **LOADED**: %s", asctime(&real_time));
+        ESP_LOGW(TAG_MAIN, "RTC Warning: COLD BOOT -- Setting clock");
+        rtc_set_time(&real_time);
     }
 
     // Fallback alarm
     struct tm fallback_alarm; // define
-    rtc_get_time(&fallback_alarm); // paste ESP's current time into alarm
+    rtc_get_time(&fallback_alarm); // paste RTC's current time into alarm
     // set alarm increment by
     fallback_alarm.tm_sec += 60;
     mktime(&fallback_alarm); // normalize
     rtc_set_alarm(&fallback_alarm); // set alarm
 
     // Start ticking alarm to dsleep unless get overwritten
-    xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
+    //xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
 
     esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address
     ESP_LOGI(TAG_MAIN, "Node MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
@@ -113,7 +101,9 @@ void app_main(void)
 
     // TEST SENSORs
     uint8_t sensor_1[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe5, 0xc6, 0x74};
+    uint8_t sensor_2[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe5, 0xd0, 0xdc};
     memcpy(sensor_nodes[0], sensor_1, MAC_SIZE);
+    memcpy(sensor_nodes[1], sensor_2, MAC_SIZE);
 
     // Initialize functions
     nvs_flash_init(); // ESP's non-volatile storage, almost instant
@@ -134,50 +124,17 @@ void app_main(void)
 
 // CORE FUNCTIONS:
 
-void sntp_init(void)
-{
-    ESP_LOGI(TAG_MAIN, "Initializing SNTP");
-    sntp_setoperatingmode(0);
-    sntp_setservername(0, "time.google.com");
-    sntp_init();
-}
+// static void fallback_dsleep(void *nothing)
+// {
+//     vTaskDelay(pdMS_TO_TICKS(MINIMUM_WAKE_TIME));
+//     // Sleep duration = +alarm - MINIMUM_WAKE_TIME
+//     // Kill tasks before dsleep
+//     if (monitoring_task) vTaskDelete(monitoring_task);
+//     if (update_task)     vTaskDelete(update_task);
+//     if (wind_task)       vTaskDelete(wind_task);
 
-void wait_for_time_sync(void)
-{
-    time_t now = 0;
-    int retry = 0;
-    const int retry_count = 10;
-
-    while (real_time.tm_year < (2024 - 1900) && ++retry < retry_count)
-    {
-        ESP_LOGI(TAG_MAIN, "NTP waiting for system time to be set... (%d/%d)", retry, retry_count);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        time(&now);
-        localtime_r(&now, &real_time);
-    }
-
-    if (retry == retry_count)
-    {
-        ESP_LOGW(TAG_MAIN, "NTP Time sync failed, using RTC or fallback");
-    }
-    else
-    {
-        ESP_LOGI(TAG_MAIN, "NTP Time synced: %s", asctime(&real_time));
-        rtc_set_time(&real_time);
-    }
-}
-
-static void fallback_dsleep(void *nothing)
-{
-    vTaskDelay(pdMS_TO_TICKS(MINIMUM_WAKE_TIME));
-    // Sleep duration = +alarm - MINIMUM_WAKE_TIME
-    // Kill tasks before dsleep
-    if (monitoring_task) vTaskDelete(monitoring_task);
-    if (update_task)     vTaskDelete(update_task);
-    if (wind_task)       vTaskDelete(wind_task);
-
-    rtc_to_dsleep();
-}
+//     rtc_to_dsleep();
+// }
 
 static void get_wind_data(void)
 {
@@ -202,14 +159,19 @@ static void send_sensor_data_request_ping(uint8_t *sensor_node)
 
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet, bool valid, const uint8_t *mac)
 {
+    rtc_get_time(&real_time);
+    char timestamp[32];
+    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", &real_time);
     if (!valid)
     {
         snprintf(
             mqtt_packet, sizeof(mqtt_packet),
+            "TIME: %s | "
             "MAC: %02x:%02x:%02x:%02x:%02x:%02x | "
             "PMS: null, null, null, null, null, null | "
             "BME: null, null, null, null | "
             "WIND: %.2f, %.2f",
+            timestamp,
             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
             wind_speed, wind_direction
         );
@@ -217,10 +179,13 @@ static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet, b
     }
     sprintf(
         mqtt_packet,
+        "TIME: %s"
         "MAC: %02x:%02x:%02x:%02x:%02x:%02x | "
         "PMS: %u, %u, %u, %u, %u, %u | "
         "BME: %.2f, %.2f, %.2f, %.2f |"
         "WIND: %.2f, %.2f",
+
+        timestamp,
 
         lora_sensor_data_packet->reading.mac[0], lora_sensor_data_packet->reading.mac[1],
         lora_sensor_data_packet->reading.mac[2], lora_sensor_data_packet->reading.mac[3],
