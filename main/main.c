@@ -1,6 +1,7 @@
 // C standard library
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 // ESP-IDF included SDK
 #include "driver/uart.h"
@@ -13,6 +14,8 @@
 #include "driver/i2c.h"
 #include "esp_efuse.h"
 #include "esp_sleep.h"
+#include "esp_sntp.h"
+#include "esp_netif_sntp.h"
 
 // Call headers
 #include "lora.h"
@@ -53,20 +56,22 @@ static void fallback_dsleep(void *nothing);
 // Initialize wind data
 float wind_speed = 0;
 float wind_direction = 0;
+struct tm real_time = {0};
 
 // Dummy real time
-struct tm real_time = {
-    .tm_year = 2025 - 1900,
-    .tm_mon  = 1,
-    .tm_mday = 1,
-    .tm_hour = 1,
-    .tm_min  = 1,
-    .tm_sec  = 0
-};
+// struct tm real_time = {
+//     .tm_year = 2025 - 1900,
+//     .tm_mon  = 1,
+//     .tm_mday = 1,
+//     .tm_hour = 1,
+//     .tm_min  = 1,
+//     .tm_sec  = 0
+// };
 
 void app_main(void)
 {
     rtc_ext_init(); // must initialize RTC before wifi or INT will hold LOW
+
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << PERI_PWR),
         .mode = GPIO_MODE_OUTPUT,
@@ -79,13 +84,20 @@ void app_main(void)
 
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
     {
-        ESP_LOGW(TAG_MAIN, "RTC Warning: COLD BOOT -- Setting clock");
-        rtc_set_time(&real_time);
+        ESP_LOGW(TAG_MAIN, "RTC Warning: COLD BOOT -- Syncing time from NTP");
+        sntp_init();
+        wait_for_time_sync();
+        ESP_LOGI(TAG_MAIN, "NTP Time **SYNCED**: %s", asctime(&real_time));
+    }
+    else
+    {
+        rtc_get_time(&real_time);
+        ESP_LOGI(TAG_MAIN, "RTC Time **LOADED**: %s", asctime(&real_time));
     }
 
     // Fallback alarm
     struct tm fallback_alarm; // define
-    rtc_get_time(&fallback_alarm); // paste RTC's current time into alarm
+    rtc_get_time(&fallback_alarm); // paste ESP's current time into alarm
     // set alarm increment by
     fallback_alarm.tm_sec += 60;
     mktime(&fallback_alarm); // normalize
@@ -121,6 +133,39 @@ void app_main(void)
 }
 
 // CORE FUNCTIONS:
+
+void sntp_init(void)
+{
+    ESP_LOGI(TAG_MAIN, "Initializing SNTP");
+    sntp_setoperatingmode(0);
+    sntp_setservername(0, "time.google.com");
+    sntp_init();
+}
+
+void wait_for_time_sync(void)
+{
+    time_t now = 0;
+    int retry = 0;
+    const int retry_count = 10;
+
+    while (real_time.tm_year < (2024 - 1900) && ++retry < retry_count)
+    {
+        ESP_LOGI(TAG_MAIN, "NTP waiting for system time to be set... (%d/%d)", retry, retry_count);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        time(&now);
+        localtime_r(&now, &real_time);
+    }
+
+    if (retry == retry_count)
+    {
+        ESP_LOGW(TAG_MAIN, "NTP Time sync failed, using RTC or fallback");
+    }
+    else
+    {
+        ESP_LOGI(TAG_MAIN, "NTP Time synced: %s", asctime(&real_time));
+        rtc_set_time(&real_time);
+    }
+}
 
 static void fallback_dsleep(void *nothing)
 {
