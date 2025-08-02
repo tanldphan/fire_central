@@ -57,9 +57,9 @@ float wind_direction = 0;
 // Dummy real time
 struct tm real_time = {
     .tm_year = 2025 - 1900,
-    .tm_mon  = 6,
-    .tm_mday = 31,
-    .tm_hour = 14,
+    .tm_mon  = 7,
+    .tm_mday = 1,
+    .tm_hour = 18,
     .tm_min  = 0,
     .tm_sec  = 0
 };
@@ -100,8 +100,13 @@ void app_main(void)
         mac_esp[3], mac_esp[4], mac_esp[5]);
 
     // TEST SENSORs
-    uint8_t sensor_1[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe5, 0xc6, 0x74};
-    uint8_t sensor_2[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe5, 0xd0, 0xdc};
+    // 7c df a1 e5 d0 dc
+    // 8c bf ea 87 8c 04
+    // 7c df a1 e5 c6 74
+    // 34 85 18 a1 f8 34
+    uint8_t sensor_1[MAC_SIZE] = {0x34, 0x85, 0x18, 0xa1, 0xf8, 0x34};
+    //uint8_t sensor_2[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe8, 0xcb, 0x28};
+    uint8_t sensor_2[MAC_SIZE] = {0x8c, 0xbf, 0xea, 0x87, 0x8c, 0x04};
     memcpy(sensor_nodes[0], sensor_1, MAC_SIZE);
     memcpy(sensor_nodes[1], sensor_2, MAC_SIZE);
 
@@ -179,10 +184,10 @@ static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet, b
     }
     sprintf(
         mqtt_packet,
-        "TIME: %s"
+        "TIME: %s | "
         "MAC: %02x:%02x:%02x:%02x:%02x:%02x | "
         "PMS: %u, %u, %u, %u, %u, %u | "
-        "BME: %.2f, %.2f, %.2f, %.2f |"
+        "BME: %.2f, %.2f, %.2f, %.2f | "
         "WIND: %.2f, %.2f",
 
         timestamp,
