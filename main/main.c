@@ -45,7 +45,7 @@ static void send_sensor_data_request_ping(uint8_t* sensor_node);
 static void prepare_packet(const union lora_packet_u *lora_sensor_data_packet, bool valid, const uint8_t *mac);
 static bool validate_mac(uint8_t* mac, uint8_t* packet, int packet_size);
 static void clear_sensor_nodes(void);
-static void fallback_dsleep(void *nothing);
+//static void fallback_dsleep(void *nothing);
 
 #define SENSOR_BATCH_INTERVAL (1000 * 5) //seconds
 #define MINIMUM_WAKE_TIME (1000 * 40) // seconds
@@ -54,15 +54,16 @@ static void fallback_dsleep(void *nothing);
 float wind_speed = 0;
 float wind_direction = 0;
 
+
 // Dummy real time
-struct tm real_time = {
-    .tm_year = 2025 - 1900,
-    .tm_mon  = 7,
-    .tm_mday = 1,
-    .tm_hour = 18,
-    .tm_min  = 0,
-    .tm_sec  = 0
-};
+// struct tm real_time = {
+//     .tm_year = 2025 - 1900,
+//     .tm_mon  = 7,
+//     .tm_mday = 1,
+//     .tm_hour = 18,
+//     .tm_min  = 0,
+//     .tm_sec  = 0
+// };
 
 void app_main(void)
 {
@@ -80,16 +81,16 @@ void app_main(void)
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
     {
         ESP_LOGW(TAG_MAIN, "RTC Warning: COLD BOOT -- Setting clock");
-        rtc_set_time(&real_time);
+        rtc_set_time(&real_time); // set RTC's time to real_time
     }
 
     // Fallback alarm
     struct tm fallback_alarm; // define
-    rtc_get_time(&fallback_alarm); // paste RTC's current time into alarm
+    rtc_get_time(&fallback_alarm); // copy RTC's time and paste into fallback_alarm
     // set alarm increment by
     fallback_alarm.tm_sec += 60;
     mktime(&fallback_alarm); // normalize
-    rtc_set_alarm(&fallback_alarm); // set alarm
+    //rtc_set_alarm(&fallback_alarm); // set alarm
 
     // Start ticking alarm to dsleep unless get overwritten
     //xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
@@ -114,12 +115,11 @@ void app_main(void)
     nvs_flash_init(); // ESP's non-volatile storage, almost instant
     lora_init(); // max ~250ms delay
     wifi_init(); // ~5-6s delay, depends on # of retries
+    fetch_real_time();
     mqtt_init(); // does not halt, runs in background
     wind_direction_init(); // instant
     wind_speed_init(); // instant
 
-    // Important: sensor node related tasks will block whatever comes after it
-    // get_wind_data does not block
     // ESPtasks(functions, name, stack size, arguments, priority, handle reference)
     xTaskCreate(sensor_data_collection, "Monitor", 1024 * 5, NULL, 6, &monitoring_task);
     xTaskCreate(update_sensor_nodes, "Update", 1024 * 5, NULL, 6, &update_task);
