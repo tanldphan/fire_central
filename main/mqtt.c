@@ -3,9 +3,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-// static struct tm server_time = {0}; // initialize server time, flushes
-// static bool time_received = false; // initialize time fetch verify
-
 // Call headers
 #include "mqtt.h"
 
@@ -14,8 +11,6 @@ static const char* TAG_MQTT = "MQTT";
 
 static esp_mqtt_client_handle_t client;
 static char mac_address_hex[MAC_SIZE * 2 + 1] = { 0 };
-static const char* sensor_nodes_assign_topic = "mqtt_test_fire_child";
-static const char* sensor_nodes_data_topic = "mqtt_test_fire";
 
 esp_mqtt_event_handle_t event = NULL;
 uint8_t sensor_nodes_update_status = 0;

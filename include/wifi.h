@@ -30,5 +30,5 @@
 #define WIFI_FAIL_BIT BIT1
 
 // Global WIFI functions:
-void wifi_init ();
-void wifi_event_handler (void* handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+void wifi_init();
+void wifi_event_handler(void* handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data);

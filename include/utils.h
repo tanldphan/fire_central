@@ -5,11 +5,10 @@
 
 extern struct tm real_time;
 
-uint16_t cal_CRC(uint8_t *data, uint16_t length);
-
 // Global functions
 
-void hex_array_to_byte_array (const char *hex_array, uint8_t *byte_array, const int hex_array_length);
+//uint16_t cal_CRC(uint8_t *data, uint16_t length);
+//void hex_array_to_byte_array (const char *hex_array, uint8_t *byte_array, const int hex_array_length);
 uint8_t hex_char_to_byte (char high, char low);
 void fetch_real_time(void);
 
@@ -24,7 +23,6 @@ typedef struct
     uint16_t pm10_atm;
 } pms5003_measurement_t;
 
-
 // Define BME data structure
 typedef struct 
 {   // 4-byte compensated metrics
@@ -33,7 +31,6 @@ typedef struct
     double humd_comp;
     double gas_comp;
 } bme680_measurement_t;
-
 
 // Define LORA packet as type
 typedef union lora_packet_u

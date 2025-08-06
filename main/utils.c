@@ -21,33 +21,33 @@ static const struct tm dummy_time = {
 #define TAG_SNTP "SNTP"
 
 // CRC error checking algorithm for serial wind sensors
-uint16_t cal_CRC(uint8_t *data, uint16_t length)
-{
-    uint16_t crc = 0xFFFF;
-    for (uint16_t pos = 0; pos < length; pos++)
-    {
-        crc ^= (uint16_t)data[pos];
-        for (uint8_t i =0; i < 8; i++)
-        {
-            if ((crc & 0x0001) != 0)
-            {
-                crc = crc >> 1;
-                crc ^= 0xA001;
-            }
-            else crc = crc >> 1;
-        }
-    }
-    return crc;
-}
+// uint16_t cal_CRC(uint8_t *data, uint16_t length)
+// {
+//     uint16_t crc = 0xFFFF;
+//     for (uint16_t pos = 0; pos < length; pos++)
+//     {
+//         crc ^= (uint16_t)data[pos];
+//         for (uint8_t i =0; i < 8; i++)
+//         {
+//             if ((crc & 0x0001) != 0)
+//             {
+//                 crc = crc >> 1;
+//                 crc ^= 0xA001;
+//             }
+//             else crc = crc >> 1;
+//         }
+//     }
+//     return crc;
+// }
 
 // Convert func: hex array >> byte array
-void hex_array_to_byte_array (const char* hex_array, uint8_t* byte_array, const int hex_array_length)
-{
-    for (int i = 0; i < hex_array_length; i += 2)
-    {
-        byte_array[i / 2] = hex_char_to_byte (hex_array[i], hex_array[i + 1]);
-    }
-}
+// void hex_array_to_byte_array (const char* hex_array, uint8_t* byte_array, const int hex_array_length)
+// {
+//     for (int i = 0; i < hex_array_length; i += 2)
+//     {
+//         byte_array[i / 2] = hex_char_to_byte (hex_array[i], hex_array[i + 1]);
+//     }
+// }
 
 // Convert func: hex char >> byte
 uint8_t hex_char_to_byte (char high, char low)

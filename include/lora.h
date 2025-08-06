@@ -20,6 +20,8 @@
 #define LORA_CS (16)
 #define LORA_RST (15)
 
+#define LORA_FREQ (915e6) // 915MHz
+
 
 // LORA model registers:
 

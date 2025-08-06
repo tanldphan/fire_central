@@ -26,8 +26,6 @@
 // Log tags
 #define TAG_MAIN "CENTRAL - main"
 
-#define PERI_PWR (19)
-
 // Declarations
 static TaskHandle_t monitoring_task;
 static TaskHandle_t update_task;
@@ -58,14 +56,14 @@ void app_main(void)
 {
     rtc_ext_init(); // must initialize RTC before wifi or INT will hold LOW
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << PERI_PWR),
+        .pin_bit_mask = (1ULL << RTC_PERI_PWR),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE
     };
     gpio_config(&io_conf);
-    gpio_set_level(PERI_PWR, 0); // turn on peri power
+    gpio_set_level(RTC_PERI_PWR, 0); // turn on peri power
 
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED)
     {

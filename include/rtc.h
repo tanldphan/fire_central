@@ -8,6 +8,7 @@
 #define RTC_SDA (10)
 #define RTC_SCL (11)
 #define RTC_SQW (12)
+#define RTC_PERI_PWR (19)
 
 // Log tags
 #define RTC "RTC"

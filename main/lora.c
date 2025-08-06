@@ -93,7 +93,6 @@ int lora_init(void)
                                           .flags = 0,
                                           .pre_cb = NULL };
     ret = spi_bus_add_device (LORA_SPI, &dev, &_spi);
-    //assert (ret == ESP_OK);
 
     if (ret != ESP_OK)
     {
@@ -128,8 +127,8 @@ int lora_init(void)
     lora_write_reg (LORA_REG_MODEM_CONFIG_3, 0x04);
     lora_set_tx_power (17);
 
-    lora_set_frequency (915e6); // 433MHz
-    lora_enable_crc ();
+    lora_set_frequency(LORA_FREQ);
+    lora_enable_crc();
     lora_explicit_header_mode();  // Ensure both ends use same header mode
     lora_set_coding_rate (1);
     lora_set_bandwidth (7);
@@ -378,11 +377,6 @@ void lora_set_bandwidth(int sbw)
 
 int lora_get_bandwidth(void)
 {
-    // int bw;
-    // bw = lora_read_reg(REG_MODEM_CONFIG_1) & 0xf0;
-    // ESP_LOGD(TAG_LORA, "bw=0x%02x", bw);
-    // bw = bw >> 4;
-    // return bw;
     return ((lora_read_reg (LORA_REG_MODEM_CONFIG_1) & 0xf0) >> 4);
 }
 
@@ -494,12 +488,6 @@ float lora_packet_snr(void) { return ((int8_t) lora_read_reg (LORA_REG_PKT_SNR_V
 void lora_close(void)
 {
     lora_sleep ();
-    //   close(__spi);  FIXME: end hardware features after lora_close
-    //   close(__cs);
-    //   close(__rst);
-    //   _spi = -1;
-    //   __cs = -1;
-    //   __rst = -1;
 }
 
 void lora_dump_registers (void)
