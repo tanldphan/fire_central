@@ -54,17 +54,6 @@ static void clear_sensor_nodes(void);
 float wind_speed = 0;
 float wind_direction = 0;
 
-
-// Dummy real time
-// struct tm real_time = {
-//     .tm_year = 2025 - 1900,
-//     .tm_mon  = 7,
-//     .tm_mday = 1,
-//     .tm_hour = 18,
-//     .tm_min  = 0,
-//     .tm_sec  = 0
-// };
-
 void app_main(void)
 {
     rtc_ext_init(); // must initialize RTC before wifi or INT will hold LOW
@@ -92,7 +81,7 @@ void app_main(void)
     mktime(&fallback_alarm); // normalize
     //rtc_set_alarm(&fallback_alarm); // set alarm
 
-    // Start ticking alarm to dsleep unless get overwritten
+    // Start ticking countdown to dsleep unless get overwritten
     //xTaskCreate(fallback_dsleep, "Fallback Deep Sleep", 1024 * 5, NULL, 6, NULL);
 
     esp_efuse_mac_get_default(mac_esp); // Fetch ESP's MAC address

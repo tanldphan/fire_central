@@ -128,7 +128,7 @@ int lora_init(void)
     lora_write_reg (LORA_REG_MODEM_CONFIG_3, 0x04);
     lora_set_tx_power (17);
 
-    lora_set_frequency (433e6); // 433MHz
+    lora_set_frequency (915e6); // 433MHz
     lora_enable_crc ();
     lora_explicit_header_mode();  // Ensure both ends use same header mode
     lora_set_coding_rate (1);

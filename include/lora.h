@@ -14,16 +14,10 @@
 // LORA assignment
 #define LORA_SPI SPI2_HOST // LORA to free SPI channel
 
-// #define LORA_RST (8) // white
-// #define LORA_CS (9) // purple
-// #define LORA_MOSI (16) // orange
-// #define LORA_MISO (17) // green
-// #define LORA_SCLK (18) // blue
-
-#define LORA_SCLK (8) // blue
-#define LORA_MISO (18) // green
-#define LORA_MOSI (17) //orange
-#define LORA_CS (16) // purple
+#define LORA_SCLK (8)
+#define LORA_MISO (18)
+#define LORA_MOSI (17)
+#define LORA_CS (16)
 #define LORA_RST (15)
 
 
