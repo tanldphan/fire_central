@@ -40,14 +40,14 @@ static const struct tm dummy_time = {
 //     return crc;
 // }
 
-// Convert func: hex array >> byte array
-// void hex_array_to_byte_array (const char* hex_array, uint8_t* byte_array, const int hex_array_length)
-// {
-//     for (int i = 0; i < hex_array_length; i += 2)
-//     {
-//         byte_array[i / 2] = hex_char_to_byte (hex_array[i], hex_array[i + 1]);
-//     }
-// }
+//Convert func: hex array >> byte array
+void hex_array_to_byte_array (const char* hex_array, uint8_t* byte_array, const int hex_array_length)
+{
+    for (int i = 0; i < hex_array_length; i += 2)
+    {
+        byte_array[i / 2] = hex_char_to_byte (hex_array[i], hex_array[i + 1]);
+    }
+}
 
 // Convert func: hex char >> byte
 uint8_t hex_char_to_byte (char high, char low)

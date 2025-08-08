@@ -11,6 +11,8 @@ static const char* TAG_MQTT = "MQTT";
 
 static esp_mqtt_client_handle_t client;
 static char mac_address_hex[MAC_SIZE * 2 + 1] = { 0 };
+static const char* sensor_nodes_data_topic = "mqtt_test_fire";
+static const char* sensor_nodes_assign_topic = "mqtt_test_fire_child";
 
 esp_mqtt_event_handle_t event = NULL;
 uint8_t sensor_nodes_update_status = 0;

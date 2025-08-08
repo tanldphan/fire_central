@@ -32,7 +32,7 @@ static TaskHandle_t update_task;
 static TaskHandle_t wind_task;
 
 static uint8_t sensor_nodes[MAX_SENSOR_NODES_COUNT][MAC_SIZE] = {0};
-static uint8_t sensor_nodes_count = 2; // assign node count here.
+static uint8_t sensor_nodes_count = 1; // assign node count here.
 
 static char mqtt_packet[256];
 
@@ -94,9 +94,9 @@ void app_main(void)
     // 34 85 18 a1 f8 34
     uint8_t sensor_1[MAC_SIZE] = {0x34, 0x85, 0x18, 0xa1, 0xf8, 0x34};
     //uint8_t sensor_2[MAC_SIZE] = {0x7c, 0xdf, 0xa1, 0xe8, 0xcb, 0x28};
-    uint8_t sensor_2[MAC_SIZE] = {0x8c, 0xbf, 0xea, 0x87, 0x8c, 0x04};
+    //uint8_t sensor_2[MAC_SIZE] = {0x8c, 0xbf, 0xea, 0x87, 0x8c, 0x04};
     memcpy(sensor_nodes[0], sensor_1, MAC_SIZE);
-    memcpy(sensor_nodes[1], sensor_2, MAC_SIZE);
+    //memcpy(sensor_nodes[1], sensor_2, MAC_SIZE);
 
     // Initialize functions
     nvs_flash_init(); // ESP's non-volatile storage, almost instant
@@ -243,6 +243,7 @@ static void sensor_data_collection()
             lora_packet_u sensor_data_packet = {0};
             bool got_valid_packet = false;
             int waited_ms = 0;
+            gpio_set_direction(GPIO_NUM_20, GPIO_MODE_OUTPUT);
 
             send_sensor_data_request_ping(sensor_nodes[i]); // shout targeted MAC
             ESP_LOGI(pcTaskGetName(NULL), "Waiting for node #%d (%02x:%02x:%02x:%02x:%02x:%02x) to respond.", i + 1,
@@ -264,11 +265,12 @@ static void sensor_data_collection()
                 // Verify packet
                 if (packet_length == PACKET_SIZE && validate_mac(sensor_nodes[i], sensor_data_packet.raw, packet_length))
                 {
-                    got_valid_packet = true;
+                    got_valid_packet = true;                        gpio_set_level(GPIO_NUM_20,1);
                     ESP_LOGI(pcTaskGetName(NULL), "%d bytes of valid packet received.", packet_length);
                     mqtt_print_packet(sensor_data_packet.raw, packet_length); 
                     prepare_packet(&sensor_data_packet, true, NULL); // bundling packet data
                     mqtt_publish_reading(mqtt_packet); // push packet to MQTT broker
+
                     break;
                 }
                 else
@@ -277,11 +279,14 @@ static void sensor_data_collection()
                     break;
                 }
             }
+            
             if (!got_valid_packet)
             {
                 ESP_LOGW(TAG_MAIN, "No valid response from node #%d. (%02x:%02x:%02x:%02x:%02x:%02x)", i + 1,
                      sensor_nodes[i][0], sensor_nodes[i][1], sensor_nodes[i][2],
                      sensor_nodes[i][3], sensor_nodes[i][4], sensor_nodes[i][5]);
+                gpio_set_level(GPIO_NUM_20, 0);
+                vTaskDelay(pdMS_TO_TICKS(1000));
                 prepare_packet(NULL, false, sensor_nodes[i]); // bundling packet data with null
                 mqtt_publish_reading(mqtt_packet); // push null packet to MQTT broker
             }
